@@ -58,7 +58,15 @@
      GET|POST /admin/operacoes/:slug/dia/lancamentos   ?pessoa=&de=&ate= | { pessoa, data, indicador, delta, motivo }  acréscimo do administrador ao realizado
      POST /admin/operacoes/:slug/dia/lancamentos/:id/desfazer
      GET|POST /admin/operacoes/:slug/ausencias    ?de=&ate= | { pessoa, data, motivo?, remover? }
-     POST /admin/operacoes/:slug/pessoas/:id/capacidade  { capacidade: n | null }  toques por dia que a pessoa consegue fazer */
+     POST /admin/operacoes/:slug/pessoas/:id/capacidade  { capacidade: n | null }  toques por dia que a pessoa consegue fazer
+     GET  /admin/operacoes/:slug/dia/ciclo?data=&ritual=   "vamos bater a meta?": projeções, chance, sinais com veredito, contingência
+     GET  /admin/operacoes/:slug/dia/semana?off=-1         relatório da semana (passada por padrão; 0 = esta, parcial)
+     GET  /admin/operacoes/:slug/dia/semana/projecao       onde esta semana vai fechar, na mesa, semanas do ciclo
+     GET  /admin/operacoes/:slug/dia/fechamento?data=      o Fechamento do dia gravado (ou a prévia ao vivo, não gravada)
+     GET  /admin/operacoes/:slug/dia/fechamentos?de=&ate=  lista dos relatórios gravados
+     GET  /admin/operacoes/:slug/dia/fechamento/rotina     situação da rotina das 17h30
+     POST /admin/operacoes/:slug/dia/fechamento/gerar      { data? } gera agora (repetir não duplica)
+     POST /admin/operacoes/:slug/dia/fechamento/acao       { data?, chave, estado: analisada|decidida|encaminhada|investigar, texto } */
 import { FUNCOES_PESSOA, resolverPack, VARIAVEIS, type PackResolvido } from '@lab/nucleo';
 import {
   atualizarPackDaOperacao, carregarConector, packDaOperacao, conectorDoTipo, criarOperacao, iguaisSeguro, importar, processarPendentes,
@@ -66,7 +74,7 @@ import {
 } from '@lab/conectores';
 import { DICIONARIO, operacaoPorSlug, relatorio, validarPeriodo } from '@lab/metricas';
 import {
-  acrescentarMetas, cicloDaOperacao, dataValida, fechamento, hojeNoFuso, metasVigentes, operacao as operacaoPlanejamento, ritmo, sugestaoBuildup,
+  acrescentarMetas, cicloDaOperacao, dataValida, fechamento, hojeNoFuso, metasVigentes, operacao as operacaoPlanejamento, ritmo, somarDias, sugestaoBuildup,
 } from '@lab/planejamento';
 import {
   aprendizados, confirmarEsforco, criarQuarter, definirMeta, definirPrograma, diagnostico, ErroDeRegra, escolherCenario, fecharCiclo,
@@ -80,7 +88,8 @@ import {
 } from '@lab/studio';
 import {
   ausencias, dadosDoDia, definirCapacidade, desfazerLancamento, equipeDoDia, ErroDoDia, fotosDoDia, gravarFoto, justificar, lancamentos, lancar, marcarAusencia,
-  marcarFeito, RITUAIS, ritualDaHora, type Ritual,
+  marcarFeito, RITUAIS, ritualDaHora, type Ritual, acaoFechamento, cicloDoDia, fotografiaDoDia, gerarFechamento, lerFechamento, listaFechamentos, projecaoDaSemana,
+  relatorioDaSemana, relatorioDoDia, statusRotina, tiqueFechamento,
 } from '@lab/dia';
 import { garantirMigracoes } from './migracoes.js';
 import { MIGRACOES } from './migracoes.gen.js';
@@ -294,6 +303,19 @@ export function criarApp(opts: { sql: Sql; env: Ambiente; fetch?: typeof fetch; 
             }
             if (sub === 'lancamentos' && !partes[4] && m === 'GET') { const pessoa = url.searchParams.get('pessoa') ?? ''; if (!UUID.test(pessoa)) return erro('informe pessoa (id)'); return json(await lancamentos(sql, op, pessoa, url.searchParams.get('de') ?? data.slice(0, 8) + '01', url.searchParams.get('ate') ?? data)); }
             if (sub === 'lancamentos' && !partes[4] && m === 'POST') { const b = await corpoJSON(req); return json(await lancar(sql, op, { pessoaId: String(b.pessoa ?? ''), data: String(b.data ?? data), indicador: String(b.indicador ?? ''), delta: Number(b.delta), motivo: String(b.motivo ?? ''), por: quem }), 201); }
+            if (sub === 'ciclo' && m === 'GET') return json(await cicloDoDia(sql, op, data, ritual, agora));
+            if (sub === 'semana' && !partes[4] && m === 'GET') return json(await relatorioDaSemana(sql, op, data, agora, Math.max(-12, Math.min(0, Number(url.searchParams.get('off') ?? -1) || 0))));
+            if (sub === 'semana' && partes[4] === 'projecao' && m === 'GET') return json(await projecaoDaSemana(sql, op, data, agora));
+            if (sub === 'fechamentos' && m === 'GET') return json(await listaFechamentos(sql, op, url.searchParams.get('de') ?? somarDias(data, -60), url.searchParams.get('ate') ?? data));
+            if (sub === 'fechamento' && !partes[4] && m === 'GET') {
+              const r = await lerFechamento(sql, op, data);
+              if (r) return json({ previa: false, ...r });
+              /* ainda não gravado: prévia ao vivo, calculada agora e não gravada (não aceita decisões) */
+              return json({ previa: true, data, atual: relatorioDoDia(await fotografiaDoDia(sql, op, data, agora)), complementos: [], acoes: {}, integro: null });
+            }
+            if (sub === 'fechamento' && partes[4] === 'rotina' && m === 'GET') return json(await statusRotina(sql, op, agora));
+            if (sub === 'fechamento' && partes[4] === 'gerar' && m === 'POST') { const b = await corpoJSON(req).catch(() => ({} as Record<string, unknown>)); const d = typeof b.data === 'string' ? b.data : data; if (!dataValida(d)) return erro('data deve ser AAAA-MM-DD'); return json(await gerarFechamento(sql, op, agora, 'manual', quem ?? 'gestor', d)); }
+            if (sub === 'fechamento' && partes[4] === 'acao' && m === 'POST') { const b = await corpoJSON(req); return json(await acaoFechamento(sql, op, { data: typeof b.data === 'string' ? b.data : data, chave: String(b.chave ?? ''), estado: String(b.estado ?? ''), texto: typeof b.texto === 'string' ? b.texto : '', por: quem }), 201); }
             if (sub === 'lancamentos' && partes[4] && partes[5] === 'desfazer' && m === 'POST') { const n = Number(partes[4]); if (!Number.isInteger(n)) return erro('lançamento não encontrado', 404); return json(await desfazerLancamento(sql, op, n, quem)); }
           }
         } catch (e) {
@@ -480,10 +502,16 @@ export function criarApp(opts: { sql: Sql; env: Ambiente; fetch?: typeof fetch; 
 }
 
 /* rodada do cron: sincroniza quem sabe sincronizar e reprocessa pendências de todos */
-export async function rodadaAgendada(opts: { sql: Sql; env: Ambiente; fetch?: typeof fetch }) {
+export async function rodadaAgendada(opts: { sql: Sql; env: Ambiente; fetch?: typeof fetch; agora?: () => Date }) {
   const dep: Dependencias = { sql: opts.sql, segredos: lerSegredo(opts.env), ...(opts.fetch ? { fetch: opts.fetch } : {}) };
   const conectores = await opts.sql<LinhaConector[]>`select id, operacao_id, tipo, nome, config, segredo_ref, ativo, cursor from lab.conector where ativo order by id`;
   const resultado: Record<string, unknown> = {};
+  /* o Fechamento do dia de cada operação: depois do horário (17h30 no fuso da operação) gera uma vez; às 23h30 complementa */
+  const agora = (opts.agora ?? (() => new Date()))();
+  for (const o of await opts.sql<{ slug: string }[]>`select slug from lab.operacao where ativa order by criado_em`) {
+    try { const op = await operacaoPlanejamento(opts.sql, o.slug); if (op) resultado['fechamento:' + o.slug] = await tiqueFechamento(opts.sql, op, agora); }
+    catch (e) { resultado['fechamento:' + o.slug] = { status: 'falhou', falha: (e as Error).message }; }
+  }
   for (const c of conectores) {
     try {
       const impl = conectorDoTipo(c.tipo);

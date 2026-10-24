@@ -3,7 +3,7 @@ import type postgres from 'postgres';
 import { criarOperacao } from '@lab/conectores';
 import { acrescentarMetas, operacao, cicloDaOperacao } from '@lab/planejamento';
 import {
-  acaoFechamento, ausencias, cicloDoDia, contextoDoDia, gerarFechamento, lerFechamento, listaFechamentos, statusRotina, tiqueFechamento, dadosDoDia, definirCapacidade, desfazerLancamento, equipeDoDia, ErroDoDia, fotosDoDia, gravarFoto, justificar, lancamentos, lancar,
+  acaoFechamento, ausencias, cicloDoDia, contextoDoDia, projecaoDaSemana, relatorioDaSemana, gerarFechamento, lerFechamento, listaFechamentos, statusRotina, tiqueFechamento, dadosDoDia, definirCapacidade, desfazerLancamento, equipeDoDia, ErroDoDia, fotosDoDia, gravarFoto, justificar, lancamentos, lancar,
   marcarAusencia, marcarFeito, metasDiarias, metasDiariasDaPessoa, montarPessoa,
 } from '../src/index.js';
 import { bancoLimpo, catalogo, semBanco } from '../../conectores/test/ajuda.js';
@@ -217,13 +217,30 @@ describe.skipIf(semBanco)('vamos bater a meta? (ciclo no banco)', () => {
     const lt = C.linhas.find(l => l.ind === 'tentativa')!; expect(lt.esp).toBeCloseTo(220 * 8 / 21); expect(lt.real).toBe(80); expect(lt.status).toBe('atencao');   // 95% do esperado
     expect(C.sinais.some(s => s.origem === 'trajetoria' && s.ind === 'tentativa')).toBe(false);                                                             // acima de 85%: sem sinal
     expect(C.sinais.some(s => s.origem === 'dados' && /Reuniões agendadas/.test(s.oque))).toBe(true);                                                        // meta sem registro = sem dado, não zero
-    expect(C.contingencia.receita).toMatchObject({ meta: 200000, real: 100000, diasRest: 14 }); expect(C.contingencia.receita.razaoEsp).toBeCloseTo(100000 / (200000 * 8 / 21));
+    expect(C.contingencia.receita).toMatchObject({ meta: 200000, real: 100000, diasRest: 13 });   // 14/10 a 30/10, contando hoje expect(C.contingencia.receita.razaoEsp).toBeCloseTo(100000 / (200000 * 8 / 21));
     expect(C.contingencia.trajetoria.rows).toHaveLength(21); expect(C.contingencia.trajetoria.antes).toBe(100000);
     const pS = C.contingencia.pessoas.find(p => p.n === 'Sara')!; expect(pS.etapas.find(e => e.k === 'tentativa')!.falta).toBe(140); expect(pS.ativ!.k).toBe('tentativa');
     expect(C.contingencia.pessoas.find(p => p.n === 'Caio')!.pipe).toBeGreaterThan(0);
     expect(C.pessoas.map(p => p.nome).sort()).toEqual(['Caio', 'Sara']);
     const fim = await cicloDoDia(sql, op, '2026-10-14', 'fim', new Date('2026-10-14T20:00:00Z'));
     expect(fim.ciclo.dd).toBe(9);
+  });
+  it('semana passada e projeção desta semana', async () => {
+    const op = (await operacao(sql, 'c'))!;
+    /* hoje é quarta 14/10 às 13h locais: semana passada = 05/10 a 11/10 (50 tentativas, 0 vendas); 4 semanas antes servem de base */
+    const S = await relatorioDaSemana(sql, op, '2026-10-14', new Date('2026-10-14T16:00:00Z'), -1);
+    expect(S.semana).toMatchObject({ ini: '2026-10-05', fim: '2026-10-11', parcial: false });
+    const t = S.linhas.find(l => l.k === 'tentativa')!; expect(t.cur).toBe(50); expect(t.meta).toBeCloseTo(220 * 5 / 21);
+    expect(t.J.st).toBe('bom');                                                 // 50 ≥ meta da semana (52,4 × … ) ? 50/52,4 = 95% → cai na base: base 20/4 = 5 → +900%
+    const v = S.linhas.find(l => l.k === 'vendas')!; expect(v.cur).toBe(2);     // vendas de 05/10 e 06/10
+    expect(S.texto).toMatch(/Semana passada · 05\/10 a 11\/10/);
+    const P = await projecaoDaSemana(sql, op, '2026-10-14', new Date('2026-10-14T16:00:00Z'));
+    expect(P.semana).toMatchObject({ ini: '2026-10-12', fim: '2026-10-18', du: 4 });   // 12/10 é feriado
+    expect(P.semana.decorridos).toBeCloseTo(1.5);                                // ter inteira + quarta 13h = meio dia
+    const pt = P.linhas.find(x => x.k === 'tentativa')!; expect(pt.feito).toBe(10); expect(pt.meta).toBeCloseTo(220 * 4 / 21); expect(pt.proj).not.toBeNull();
+    expect(P.mesa.length).toBe(5); expect(P.mesa[0]!.valor).toBe(1000000); expect(P.mesaResumo.total).toBe(1100000);
+    expect(P.semanasCiclo.find(x => x.k === 'tentativa')!.celulas.length).toBeGreaterThanOrEqual(4);
+    expect(P.texto).toMatch(/Projeção da semana 12\/10 a 18\/10/);
   });
 });
 

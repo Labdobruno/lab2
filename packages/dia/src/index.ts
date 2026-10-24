@@ -10,3 +10,4 @@ export * from './fechamento.js';
 export * from './semana.js';
 export * from './ciclo.js';
 export * from './fechamento_consultas.js';
+export * from './semana_consultas.js';

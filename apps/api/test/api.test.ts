@@ -131,6 +131,23 @@ describe.skipIf(semBanco)('API', () => {
     expect(E).toMatchObject({ data: '2026-10-14', ritual: 'manha', pessoas: 1 });
     expect(E.quadro[0]).toMatchObject({ pessoa: 'Sara', funcao: 'Pré-vendas' });
     expect((await dia('GET', '/admin/operacoes/nao-existe/dia/equipe')).status).toBe(404);
+
+    /* Onda 2: vamos bater a meta?, semana, Fechamento do dia (prévia, gerar, decisão, rotina) e o cron */
+    const C = await (await dia('GET', '/admin/operacoes/dia/dia/ciclo')).json() as any;
+    expect(C).toMatchObject({ data: '2026-10-14', ritual: 'manha' }); expect(C.pergunta.resposta).toBeDefined(); expect(C.contingencia.pessoas[0].n).toBe('Sara');
+    const S = await (await dia('GET', '/admin/operacoes/dia/dia/semana')).json() as any; expect(S.semana).toMatchObject({ ini: '2026-10-05', off: -1 });
+    const PS = await (await dia('GET', '/admin/operacoes/dia/dia/semana/projecao')).json() as any; expect(PS.semana.ini).toBe('2026-10-12');
+    const prev = await (await dia('GET', '/admin/operacoes/dia/dia/fechamento')).json() as any;
+    expect(prev.previa).toBe(true); expect(prev.atual.resumo.status).toBeDefined();
+    expect((await dia('POST', '/admin/operacoes/dia/dia/fechamento/acao', { chave: 'x', estado: 'decidida', texto: 'ainda sem relatório' })).status).toBe(404);
+    const g = await (await dia('POST', '/admin/operacoes/dia/dia/fechamento/gerar', {})).json() as any; expect(g.status).toBe('ok');
+    const lido = await (await dia('GET', '/admin/operacoes/dia/dia/fechamento')).json() as any; expect(lido.previa).toBe(false); expect(lido.integro).toBe(true);
+    expect((await dia('POST', '/admin/operacoes/dia/dia/fechamento/acao', { chave: 'dia:tentativa:Sara', estado: 'analisada' })).status).toBe(201);
+    expect((await dia('POST', '/admin/operacoes/dia/dia/fechamento/acao', { chave: 'dia:tentativa:Sara', estado: 'decidida', texto: 'x' })).status).toBe(400);
+    expect((await (await dia('GET', '/admin/operacoes/dia/dia/fechamentos')).json() as any[]).map(x => x.data)).toEqual(['2026-10-14']);
+    expect((await (await dia('GET', '/admin/operacoes/dia/dia/fechamento/rotina')).json() as any).existe).toBe(true);
+    const cron = await rodadaAgendada({ sql, env: { ADMIN_TOKEN: TOKEN }, agora: () => new Date('2026-10-15T20:30:00Z') });
+    expect((cron['fechamento:dia'] as any).status).toBe('ok');
   });
 
   it('hipóteses: biblioteca, achados, qualidade, decisão e experimento', async () => {
@@ -235,6 +252,7 @@ describe.skipIf(semBanco)('API', () => {
 
   it('rodada agendada processa todos os conectores ativos', async () => {
     const r = await rodadaAgendada({ sql, env: { ADMIN_TOKEN: TOKEN } });
-    expect(Object.keys(r).sort()).toEqual(['n8n', 'planilhas']);
+    expect(Object.keys(r).filter(k => !k.startsWith('fechamento:')).sort()).toEqual(['n8n', 'planilhas']);
+    expect(Object.keys(r).filter(k => k.startsWith('fechamento:')).length).toBeGreaterThan(0);   // o tique do Fechamento do dia roda por operação
   });
 });
