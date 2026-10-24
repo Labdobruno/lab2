@@ -6,3 +6,5 @@ export * from './consultas.js';
 export * from './contingencia.js';
 export * from './objetivos.js';
 export * from './projecao.js';
+export * from './fechamento.js';
+export * from './semana.js';
