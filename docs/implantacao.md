@@ -60,3 +60,7 @@ curl -X POST $API/admin/conectores -H "authorization: Bearer $TOKEN" \
 
 - Nunca coloque segredos em arquivos do repositório. O `.gitignore` já ignora `.dev.vars` e `.env`.
 - Se um token vazar, gere outro e rode `wrangler secret put` de novo. Para chaves do CRM, revogue no próprio CRM.
+
+## Atualizações do banco
+
+A partir da fase 5 o Worker aplica sozinho as migrations pendentes (na primeira chamada autenticada ou na rodada de 15 minutos). Basta publicar com `npx wrangler deploy`; o `/saude` mostra `"migracoes": "em dia"` quando terminou. Ao criar uma migration nova, rode `npm run migracoes:gerar` antes de publicar (o teste avisa se esquecer).

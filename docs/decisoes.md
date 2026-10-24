@@ -23,3 +23,11 @@ Cada decisão tem o porquê, para não ser refeita sem motivo.
 - **Como:** o Worker repassa e-mail e senha ao Supabase (`/auth/entrar`), e a cada chamada de `/admin` pergunta ao Supabase de quem é o token. A página nunca fala com o Supabase, então a política de segurança da tela continua fechada.
 - **Por quê:** senha própria, troca por e-mail, possibilidade de mais usuários e nenhum segredo único repartido.
 - **Fora desta etapa:** verificação em duas etapas (MFA) no login.
+
+## Fase 5: quarter, fechamento e migrations automáticas
+
+- **Quarter em 6 passos:** diagnóstico, meta, cenários, esforço necessário, programa de ciclos e compromisso. O passo só avança na ordem; refazer um passo derruba os seguintes; depois de travado, nada muda (gatilho no banco).
+- **Cenários:** o conservador converte 15% menos e o otimista 15% mais (teto de 100%); o ticket não muda. Os 15% são uma escolha inicial, ajustável em `packages/ciclos/src/plano.ts`.
+- **Travar** grava, para cada ciclo, a meta de receita e a de cada degrau do funil (por operação e por pessoa). São as mesmas metas que o ritmo e o Fechamento do dia leem.
+- **Fechar o ciclo** só depois do último dia útil, uma vez por ciclo. O retrato guarda metas, ritmo final e métricas, com assinatura SHA-256; a tela mostra "Íntegro" ou "ALTERADO".
+- **Migrations automáticas:** o Worker traz embutidas as migrations (`npm run migracoes:gerar`) e aplica as pendentes, em transação e com trava, na primeira chamada autenticada e a cada rodada do agendamento. Bancos que receberam as duas primeiras à mão são reconhecidos. O `/saude` informa se há migration pendente. Motivo: quem publica o Worker não precisa abrir o SQL Editor do Supabase.

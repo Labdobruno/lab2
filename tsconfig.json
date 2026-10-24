@@ -18,6 +18,9 @@
       ],
       "@lab/planejamento": [
         "packages/planejamento/src/index.ts"
+      ],
+      "@lab/ciclos": [
+        "packages/ciclos/src/index.ts"
       ]
     }
   },

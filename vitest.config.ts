@@ -8,6 +8,7 @@ export default defineConfig({
       '@lab/conectores': fileURLToPath(new URL('./packages/conectores/src/index.ts', import.meta.url)),
       '@lab/metricas': fileURLToPath(new URL('./packages/metricas/src/index.ts', import.meta.url)),
       '@lab/planejamento': fileURLToPath(new URL('./packages/planejamento/src/index.ts', import.meta.url)),
+      '@lab/ciclos': fileURLToPath(new URL('./packages/ciclos/src/index.ts', import.meta.url)),
     },
   },
   test: {

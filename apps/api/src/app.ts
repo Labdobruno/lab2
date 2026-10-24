@@ -25,6 +25,17 @@
      GET  /admin/operacoes/:slug/buildup?receita=&data=&ticket=   sugestão de metas, de receita até tentativas (não grava)
      GET  /admin/operacoes/:slug/ritmo?data=    esperado até hoje, quem está no ritmo e quem está atrás
      GET  /admin/operacoes/:slug/fechamento-do-dia?data=
+     GET  /admin/operacoes/:slug/quarter?data=  plano do quarter: passos, cenários e programa de ciclos
+     POST /admin/operacoes/:slug/quarter        inicia o quarter (passo 1)        ?data=
+     GET  /admin/operacoes/:slug/quarter/diagnostico                              passo 1: o quarter anterior
+     POST /admin/operacoes/:slug/quarter/meta   { receita, ticketMedio?, taxas? } passo 2
+     POST /admin/operacoes/:slug/quarter/cenario { cenario }                      passo 3
+     POST /admin/operacoes/:slug/quarter/confirmar                                passo 4
+     POST /admin/operacoes/:slug/quarter/programa { pesos? }                      passo 5
+     POST /admin/operacoes/:slug/quarter/travar                                   passo 6: grava as metas dos ciclos
+     POST /admin/operacoes/:slug/fechar-ciclo?data=   retrato imutável e assinado do ciclo
+     GET  /admin/operacoes/:slug/retratos
+     GET|POST /admin/operacoes/:slug/aprendizados     { tipo, texto, cicloInicio? }
      GET  /admin/operacoes/:slug/metricas?de=AAAA-MM-DD&ate=AAAA-MM-DD   canais, coorte, fluxo, vendas e retenção (somente leitura) */
 import { FUNCOES_PESSOA, resolverPack } from '@lab/nucleo';
 import {
@@ -35,6 +46,12 @@ import { DICIONARIO, operacaoPorSlug, relatorio, validarPeriodo } from '@lab/met
 import {
   acrescentarMetas, cicloDaOperacao, dataValida, fechamento, hojeNoFuso, metasVigentes, operacao as operacaoPlanejamento, ritmo, sugestaoBuildup,
 } from '@lab/planejamento';
+import {
+  aprendizados, confirmarEsforco, criarQuarter, definirMeta, definirPrograma, diagnostico, ErroDeRegra, escolherCenario, fecharCiclo,
+  quarterDaOperacao, registrarAprendizado, retratos, travarQuarter,
+} from '@lab/ciclos';
+import { garantirMigracoes } from './migracoes.js';
+import { MIGRACOES } from './migracoes.gen.js';
 import type { Sql } from 'postgres';
 import { CATALOGO } from './catalogo.js';
 import { CSP, PAGINA } from './tela.js';
@@ -61,7 +78,7 @@ async function corpoJSON(req: Request): Promise<Record<string, unknown>> {
 }
 class RespostaErro extends Error { constructor(m: string, readonly status: number) { super(m); } }
 
-export function criarApp(opts: { sql: Sql; env: Ambiente; fetch?: typeof fetch; agora?: () => Date }) {
+export function criarApp(opts: { sql: Sql; env: Ambiente; fetch?: typeof fetch; agora?: () => Date; migrarAoIniciar?: boolean }) {
   const dep: Dependencias = { sql: opts.sql, segredos: lerSegredo(opts.env), ...(opts.fetch ? { fetch: opts.fetch } : {}), ...(opts.agora ? { agora: opts.agora } : {}) };
   const { sql } = opts;
 
@@ -93,6 +110,37 @@ export function criarApp(opts: { sql: Sql; env: Ambiente; fetch?: typeof fetch; 
         } catch (e) {
           const msg = (e as Error).message;
           return erro(/duplicate key|unique/i.test(msg) ? `já existe uma operação "${b.slug}"` : msg, /unique/i.test(msg) ? 409 : 400);
+        }
+      }
+      if (id && ['quarter', 'fechar-ciclo', 'retratos', 'aprendizados'].includes(acao ?? '')) {
+        const op = await operacaoPlanejamento(sql, id);
+        if (!op) return erro('operação não encontrada', 404);
+        const data = url.searchParams.get('data') ?? hojeNoFuso(op.fuso, (opts.agora ?? (() => new Date()))());
+        if (!dataValida(data)) return erro('data deve ser AAAA-MM-DD');
+        try {
+          if (acao === 'quarter') {
+            if (!sub && m === 'GET') return json(await quarterDaOperacao(sql, op, data));
+            if (!sub && m === 'POST') return json(await criarQuarter(sql, op, data), 201);
+            if (sub === 'diagnostico' && m === 'GET') return json(await diagnostico(sql, op, data));
+            if (m === 'POST') {
+              const b = await corpoJSON(req).catch(() => ({} as Record<string, unknown>));
+              if (sub === 'meta') return json(await definirMeta(sql, op, data, { receita: Number(b.receita), ...(b.ticketMedio != null ? { ticketMedio: Number(b.ticketMedio) } : {}), ...(b.taxas ? { taxas: b.taxas as never } : {}) }));
+              if (sub === 'cenario') return json(await escolherCenario(sql, op, data, String(b.cenario)));
+              if (sub === 'confirmar') return json(await confirmarEsforco(sql, op, data));
+              if (sub === 'programa') return json(await definirPrograma(sql, op, data, Array.isArray(b.pesos) ? b.pesos.map(Number) : undefined));
+              if (sub === 'travar') return json(await travarQuarter(sql, op, data));
+            }
+          }
+          if (acao === 'fechar-ciclo' && m === 'POST') return json(await fecharCiclo(sql, op, data, hojeNoFuso(op.fuso, (opts.agora ?? (() => new Date()))())), 201);
+          if (acao === 'retratos' && m === 'GET') return json(await retratos(sql, op));
+          if (acao === 'aprendizados' && m === 'GET') return json(await aprendizados(sql, op));
+          if (acao === 'aprendizados' && m === 'POST') {
+            const b = await corpoJSON(req);
+            return json(await registrarAprendizado(sql, op, { tipo: String(b.tipo), texto: String(b.texto ?? ''), cicloInicio: typeof b.cicloInicio === 'string' && dataValida(b.cicloInicio) ? b.cicloInicio : null }), 201);
+          }
+        } catch (e) {
+          if (e instanceof ErroDeRegra) return erro(e.message, e.status);
+          throw e;
         }
       }
       if (id && acao === 'pessoas') {
@@ -220,8 +268,14 @@ export function criarApp(opts: { sql: Sql; env: Ambiente; fetch?: typeof fetch; 
       }
       if (partes[0] === 'saude' && req.method === 'GET') {
         let banco = 'ok';
-        try { await sql`select 1`; } catch { banco = 'indisponível'; }
-        return json({ ok: banco === 'ok', banco, conectores: Object.keys(CONECTORES), packs: Object.keys(CATALOGO) }, banco === 'ok' ? 200 : 503);
+        let migracoes = 'não verificado';
+        try {
+          await sql`select 1`;
+          const feitas = await sql<{ nome: string }[]>`select nome from lab.migracao`.catch(() => [] as { nome: string }[]);
+          const faltam = MIGRACOES.filter(m => !feitas.some(f => f.nome === m.nome)).length;
+          migracoes = faltam ? `${faltam} pendente(s): serão aplicadas na próxima rodada (até 15 min)` : 'em dia';
+        } catch { banco = 'indisponível'; }
+        return json({ ok: banco === 'ok', banco, migracoes, conectores: Object.keys(CONECTORES), packs: Object.keys(CATALOGO) }, banco === 'ok' ? 200 : 503);
       }
       if (partes[0] === 'entrada' && partes[1] && req.method === 'POST') {
         const c = await conectorOu404(partes[1]);
@@ -250,6 +304,7 @@ export function criarApp(opts: { sql: Sql; env: Ambiente; fetch?: typeof fetch; 
         const enviado = (req.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '');
         const autorizado = (tokenOk && iguaisSeguro(enviado, token!)) || await tokenDoAdmin(opts.env, opts.fetch ?? fetch, enviado);
         if (!autorizado) return erro('não autorizado', 401);
+        if (opts.migrarAoIniciar) await garantirMigracoes(sql);
         return await admin(req, partes.slice(1), url);
       }
       return erro('rota não encontrada', 404);

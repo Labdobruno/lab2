@@ -30,7 +30,7 @@ button{cursor:pointer}button.primario{background:var(--foco);border-color:var(--
 .chip{display:inline-block;border-radius:999px;padding:2px 10px;font-size:.85rem;font-weight:600;white-space:nowrap}
 .no_ritmo{background:var(--ok-f);color:var(--ok)}.atencao{background:var(--at-f);color:var(--at)}.atras{background:var(--ruim-f);color:var(--ruim)}.sem{background:var(--linha);color:var(--suave)}
 table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:8px 4px;border-bottom:1px solid var(--linha);font-size:.95rem}
-.erro{color:var(--ruim);font-weight:600}.ok{color:var(--ok);font-weight:600}.abas{display:flex;gap:8px;margin:0 0 4px}.abas button[aria-current=page]{border-color:var(--foco);font-weight:700}form.linha{display:flex;gap:8px;flex-wrap:wrap;align-items:end}label{display:block;font-size:.85rem;color:var(--suave)}
+.erro{color:var(--ruim);font-weight:600}.ok{color:var(--ok);font-weight:600}.abas{display:flex;gap:8px;margin:0 0 4px;flex-wrap:wrap}.passo{display:flex;gap:10px;align-items:center;padding:6px 0}.num{display:inline-flex;width:28px;height:28px;border-radius:50%;align-items:center;justify-content:center;font-weight:700;border:2px solid var(--linha);flex:none}.num.feito{background:var(--ok-f);border-color:var(--ok);color:var(--ok)}.num.agora{border-color:var(--foco);color:var(--foco)}.cenarios{display:grid;gap:8px}.mini{font-size:.9rem}.abas button[aria-current=page]{border-color:var(--foco);font-weight:700}form.linha{display:flex;gap:8px;flex-wrap:wrap;align-items:end}label{display:block;font-size:.85rem;color:var(--suave)}
 </style>
 </head>
 <body>
@@ -41,7 +41,7 @@ var app=document.getElementById('app');
 var NOMES={receita:'Receita (R$)',vendas:'Vendas',oportunidades:'Oportunidades',reuniao_realizada:'Reuniões feitas',agendamento:'Agendamentos',contato:'Contatos',tentativa:'Tentativas',proposta_enviada:'Propostas enviadas'};
 var ROTULO={no_ritmo:'No ritmo',atencao:'Atenção',atras:'Atrás'};
 var PIOR={atras:3,atencao:2,no_ritmo:1};
-var estado={ops:null,slug:null,data:null,pessoa:null,aba:'ritmo'};
+var estado={ops:null,slug:null,data:null,pessoa:null,aba:'ritmo',passoQ:null,viuDiag:false};
 var FUNCOES={sdr:'SDR (prospecta e agenda)',closer:'Closer (fecha)',ambos:'SDR e closer',cs:'Sucesso do cliente',gestor:'Gestor',outro:'Outro'};
 function guardar(k,v){try{if(v==null)sessionStorage.removeItem(k);else sessionStorage.setItem(k,v)}catch(e){}}
 function ler(k){try{return sessionStorage.getItem(k)}catch(e){return null}}
@@ -97,7 +97,7 @@ function controles(){
 }
 function abas(){
   function b(id,t){var x=el('button',{type:'button',texto:t,onclick:function(){estado.aba=id;estado.pessoa=null;desenhar()}});if(estado.aba===id)x.setAttribute('aria-current','page');return x}
-  return el('div',{class:'abas'},[b('ritmo','Ritmo do time'),b('equipe','Equipe e metas')]);
+  return el('div',{class:'abas'},[b('ritmo','Ritmo'),b('equipe','Equipe e metas'),b('quarter','Quarter'),b('fechamento','Fechamento')]);
 }
 function agrupar(linhas){
   var por={};
@@ -107,6 +107,8 @@ function agrupar(linhas){
 async function desenhar(){
   limpar();
   if(estado.aba==='equipe')return telaEquipe();
+  if(estado.aba==='quarter')return telaQuarter();
+  if(estado.aba==='fechamento')return telaFechamento();
   app.appendChild(el('p',{class:'suave',texto:'Carregando…'}));
   var q=estado.data?('?data='+encodeURIComponent(estado.data)):'';
   var r;
@@ -186,6 +188,137 @@ async function telaEquipe(msg,ok){
       try{await api(base+'/metas'+(estado.data?('?data='+encodeURIComponent(estado.data)):''),{metas:[{indicador:ind.value,pessoaId:quem.value||null,valor:v}]});telaEquipe('Meta salva.',true)}catch(x){telaEquipe(x.message)}}},
       [el('div',{},[el('label',{for:'mq',texto:'De quem'}),quem]),el('div',{},[el('label',{for:'mi',texto:'O que'}),ind]),el('div',{},[el('label',{for:'mv',texto:'Meta do ciclo'}),val]),el('button',{class:'primario',type:'submit',texto:'Salvar meta'})]),
     vig.length?el('table',{},[el('thead',{},[el('tr',{},['De quem','O que','Meta'].map(function(t){return el('th',{texto:t})}))]),el('tbody',{},vig)]):el('p',{class:'suave',texto:'Nenhuma meta neste ciclo.'})]));
+}
+function pct(n){return n==null?'—':Math.round(n*100)+'%'}
+function reais(n){return n==null?'—':new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0}).format(n)}
+var DEGRAUS=[['vendas','Vendas'],['oportunidades','Oportunidades'],['reuniao_realizada','Reuniões feitas'],['agendamento','Agendamentos'],['contato','Contatos'],['tentativa','Tentativas']];
+var CENARIO_NOME={conservador:'Conservador',base:'Base',otimista:'Otimista'};
+function qs(){return estado.data?('?data='+encodeURIComponent(estado.data)):''}
+function linhasDoPlano(plano,porDia){
+  return el('table',{},[el('thead',{},[el('tr',{},['O que','Total','Por dia útil'].map(function(t){return el('th',{texto:t})}))]),el('tbody',{},DEGRAUS.filter(function(d){return plano.totais[d[0]]!=null}).map(function(d){return el('tr',{},[el('td',{texto:d[1]}),el('td',{texto:numero(plano.totais[d[0]])}),el('td',{texto:plano.porDia[d[0]]==null?'—':numero(plano.porDia[d[0]])})])}))]);
+}
+async function telaQuarter(msg,ok){
+  limpar();
+  var base='/admin/operacoes/'+encodeURIComponent(estado.slug),d;
+  try{d=await api(base+'/quarter'+qs())}catch(e){if(e.message==='401')return telaEntrada('Acesso recusado. Entre de novo.');app.appendChild(el('p',{class:'erro',texto:'Não consegui carregar: '+e.message}));return}
+  async function enviar(sub,corpo,sucesso){try{await api(base+'/quarter/'+sub+qs(),corpo||{});estado.passoQ=null;telaQuarter(sucesso,true)}catch(e){telaQuarter(e.message)}}
+  app.appendChild(abas());
+  app.appendChild(el('h1',{texto:'Quarter '+d.rotulo}));
+  app.appendChild(el('p',{class:'suave',texto:data(d.inicio)+' a '+data(d.fim)+' · '+d.ciclos.length+' ciclos · '+d.diasUteis+' dias úteis'}));
+  app.appendChild(controles());
+  if(msg)app.appendChild(el('p',{class:ok?'ok':'erro',texto:msg}));
+  var q=d.quarter;
+  if(!q){
+    app.appendChild(el('div',{class:'cartao'},[el('p',{texto:'O planejamento deste quarter ainda não começou. São 6 passos, um de cada vez.'}),
+      el('button',{class:'primario',type:'button',texto:'Começar o planejamento',onclick:function(){enviar('', {},'Planejamento iniciado.')}})]));
+    return;
+  }
+  var agora=Math.min(q.fase+1,6);if(q.status==='travado')agora=7;
+  if(q.fase===1&&!estado.viuDiag&&q.status!=='travado'&&!estado.passoQ)agora=1;
+  var atual=estado.passoQ&&q.status!=='travado'&&estado.passoQ<=q.fase+1?estado.passoQ:agora;
+  var lista=d.passos.map(function(p){
+    var feito=p.n<=q.fase,eh=p.n===atual;
+    var linha=[el('span',{class:'num '+(feito?'feito':eh?'agora':''),texto:feito?'✓':String(p.n)}),el('span',{texto:p.nome,style:eh?'font-weight:700':''})];
+    if(feito&&q.status!=='travado'&&!eh)linha.push(el('button',{type:'button',class:'mini',texto:'Refazer',onclick:function(){estado.passoQ=p.n;telaQuarter()}}));
+    return el('div',{class:'passo'},linha);
+  });
+  app.appendChild(el('div',{class:'cartao'},lista));
+  if(q.status==='travado'){
+    app.appendChild(el('div',{class:'cartao'},[el('p',{class:'ok',texto:'Plano travado em '+data(q.travadoEm.slice(0,10))+'.'}),el('p',{texto:'Meta do quarter: '+reais(q.receitaMeta)+' · cenário '+CENARIO_NOME[q.cenario]+'. As metas de cada ciclo já foram gravadas e aparecem em "Equipe e metas" e em "Ritmo".'})]));
+    if(d.programa)programaCartao(d.programa);
+    return;
+  }
+  var p=d.passos[atual-1];
+  var caixa=[el('h2',{texto:p.n+'. '+p.nome}),el('p',{class:'suave',texto:p.pergunta})];
+  if(atual===1){
+    var alvo=el('div',{});
+    caixa.push(el('button',{type:'button',texto:'Ver o quarter anterior',onclick:async function(){
+      try{var g=await api(base+'/quarter/diagnostico'+qs());while(alvo.firstChild)alvo.removeChild(alvo.firstChild);
+        alvo.appendChild(el('p',{class:'suave',texto:g.quarterAnterior.rotulo+' · '+data(g.quarterAnterior.inicio)+' a '+data(g.quarterAnterior.fim)}));
+        alvo.appendChild(el('p',{texto:'Vendas: '+g.vendas.quantidade+' · Receita: '+reais(g.vendas.receita)+' · Taxa de ganho: '+pct(g.taxaDeGanho.taxa)+(g.taxaDeGanho.total&&!g.taxaDeGanho.amostraSuficiente?' (poucos casos)':'')}));
+        g.canais.forEach(function(c){alvo.appendChild(el('p',{class:'mini',texto:c.canal+': CAC '+reais(c.cac)+' · '+c.vendas+' vendas · ROI '+(c.roi==null?'—':pct(c.roi))}))});
+        if(!g.canais.length&&!g.vendas.quantidade)alvo.appendChild(el('p',{class:'suave',texto:'Sem dados no quarter anterior. Tudo bem: o plano usa só o que você informar.'}));
+      }catch(e){telaQuarter(e.message)}}}));
+    caixa.push(alvo);
+    caixa.push(el('p',{},[el('button',{class:'primario',type:'button',texto:'Seguir para a meta',onclick:function(){estado.viuDiag=true;estado.passoQ=null;telaQuarter()}})]));
+  }
+  if(atual===2){
+    var rec=el('input',{type:'number',id:'qr',min:'0',step:'any',inputmode:'decimal',value:q.receitaMeta==null?'':String(q.receitaMeta)});
+    var tk=el('input',{type:'number',id:'qt',min:'0',step:'any',inputmode:'decimal',value:q.premissas.ticketMedio==null?'':String(Math.round(q.premissas.ticketMedio))});
+    var TX=[['oportunidades','Vendas ÷ oportunidades'],['reuniao_realizada','Oportunidades ÷ reuniões feitas'],['agendamento','Reuniões feitas ÷ agendamentos'],['contato','Agendamentos ÷ contatos'],['tentativa','Contatos ÷ tentativas']];
+    var campos=TX.map(function(t){var v=q.premissas.taxas&&q.premissas.taxas[t[0]];return {k:t[0],i:el('input',{type:'number',min:'0',max:'100',step:'any',inputmode:'decimal','aria-label':t[1],value:v==null?'':String(Math.round(v*1000)/10)}),n:t[1]}});
+    caixa.push(el('form',{onsubmit:function(e){e.preventDefault();
+      var corpo={receita:Number(rec.value)};if(tk.value!=='')corpo.ticketMedio=Number(tk.value);
+      var taxas={};campos.forEach(function(c){if(c.i.value!=='')taxas[c.k]=Number(c.i.value)/100});if(Object.keys(taxas).length)corpo.taxas=taxas;
+      enviar('meta',corpo,'Meta salva.')}},[
+      el('p',{},[el('label',{for:'qr',texto:'Receita do quarter (R$)'}),rec]),
+      el('p',{},[el('label',{for:'qt',texto:'Ticket médio (R$). Vazio = usar o histórico'}),tk]),
+      el('p',{class:'suave',texto:'Taxas de conversão em %. Vazio = usar o histórico da operação; sem histórico, informe aqui.'}),
+      el('div',{},campos.map(function(c){return el('p',{},[el('label',{texto:c.n+' (%)'}),c.i])})),
+      el('button',{class:'primario',type:'submit',texto:'Salvar meta'})]));
+  }
+  if(atual===3&&d.cenarios){
+    caixa.push(el('div',{class:'cenarios'},['conservador','base','otimista'].map(function(n){
+      var c=d.cenarios[n];
+      return el('div',{class:'cartao'},[el('strong',{texto:CENARIO_NOME[n]}),el('p',{class:'suave mini',texto:n==='base'?'Usa as taxas como estão.':(n==='conservador'?'Converte 15% menos.':'Converte 15% mais.')}),
+        c.ok?el('p',{texto:numero(c.totais.vendas)+' vendas · '+numero(c.porDia.tentativa)+' tentativas por dia útil no total'}):el('p',{class:'erro',texto:c.avisos[0]||'Faltam dados para calcular.'}),
+        el('button',{type:'button',class:q.cenario===n?'primario':'',texto:'Assumir este cenário',onclick:function(){enviar('cenario',{cenario:n},'Cenário escolhido.')}})]);
+    })));
+  }
+  if(atual===4&&d.cenarios&&q.cenario){
+    var c4=d.cenarios[q.cenario];
+    caixa.push(el('p',{texto:'Cenário '+CENARIO_NOME[q.cenario]+' · '+reais(q.receitaMeta)+' no quarter'}));
+    caixa.push(linhasDoPlano(c4));
+    c4.porPessoa.forEach(function(pp){caixa.push(el('p',{class:'mini',texto:pp.nome+': '+DEGRAUS.filter(function(x){return pp.metas[x[0]]!=null}).map(function(x){return x[1].toLowerCase()+' '+numero(pp.metas[x[0]])}).join(' · ')}))});
+    c4.avisos.forEach(function(a){caixa.push(el('p',{class:'erro mini',texto:a}))});
+    caixa.push(el('button',{class:'primario',type:'button',texto:'Cabe no time: confirmar',onclick:function(){enviar('confirmar',{},'Esforço confirmado.')}}));
+  }
+  if(atual===5){
+    var pesos=(q.pesos&&q.pesos.length===d.ciclos.length)?q.pesos:d.ciclos.map(function(c){return c.diasUteis/d.diasUteis});
+    var ins=d.ciclos.map(function(c,i){return el('input',{type:'number',min:'0',max:'100',step:'any',inputmode:'decimal','aria-label':'Peso do ciclo '+data(c.inicio),value:String(Math.round(pesos[i]*1000)/10)})});
+    caixa.push(el('p',{class:'suave',texto:'Quanto da meta cai em cada ciclo, em %. O padrão divide pelos dias úteis.'}));
+    caixa.push(el('form',{onsubmit:function(e){e.preventDefault();enviar('programa',{pesos:ins.map(function(x){return Number(x.value)})},'Programa salvo.')}},d.ciclos.map(function(c,i){return el('p',{},[el('label',{texto:'Ciclo de '+data(c.inicio)+' · '+c.diasUteis+' dias úteis (%)'}),ins[i]])}).concat([el('button',{class:'primario',type:'submit',texto:'Salvar programa'})])));
+    if(d.programa)programaCartao(d.programa,caixa);
+  }
+  if(atual===6){
+    if(d.programa)programaCartao(d.programa,caixa);
+    caixa.push(el('p',{class:'erro',texto:'Atenção: travar não pode ser desfeito. As metas de cada ciclo serão gravadas e o plano deixa de mudar.'}));
+    caixa.push(el('button',{class:'primario',type:'button',texto:'Travar o plano e gerar as metas',onclick:function(){if(confirm('Travar o plano do quarter? Isso não pode ser desfeito.'))enviar('travar',{},'Plano travado. Metas dos ciclos geradas.')}}));
+  }
+  app.appendChild(el('div',{class:'cartao'},caixa));
+}
+function programaCartao(prog,alvo){
+  var linhas=prog.ciclos.map(function(c){return el('tr',{},[el('td',{texto:data(c.inicio)}),el('td',{texto:pct(c.peso)}),el('td',{texto:reais(c.metaReceita)}),el('td',{texto:c.plano.totais.vendas==null?'—':numero(c.plano.totais.vendas)})])});
+  var t=el('table',{},[el('thead',{},[el('tr',{},['Ciclo','Peso','Meta de receita','Vendas'].map(function(x){return el('th',{texto:x})}))]),el('tbody',{},linhas)]);
+  if(alvo)alvo.push(t);else app.appendChild(el('div',{class:'cartao'},[el('h2',{texto:'Programa de ciclos'}),t]));
+}
+var TIPOS_A={funcionou:'Funcionou',nao_funcionou:'Não funcionou',hipotese:'Hipótese',decisao:'Decisão'};
+async function telaFechamento(msg,ok){
+  limpar();
+  var base='/admin/operacoes/'+encodeURIComponent(estado.slug),rs,ap,ci;
+  try{rs=await api(base+'/retratos');ap=await api(base+'/aprendizados');ci=await api(base+'/ciclo'+qs())}
+  catch(e){if(e.message==='401')return telaEntrada('Acesso recusado. Entre de novo.');app.appendChild(el('p',{class:'erro',texto:'Não consegui carregar: '+e.message}));return}
+  app.appendChild(abas());
+  app.appendChild(el('h1',{texto:'Fechamento do ciclo'}));
+  app.appendChild(el('p',{class:'suave',texto:'Ciclo de '+data(ci.ciclo.inicio)+' a '+data(ci.ciclo.fim)}));
+  app.appendChild(controles());
+  if(msg)app.appendChild(el('p',{class:ok?'ok':'erro',texto:msg}));
+  var jaFechado=rs.some(function(r){return r.cicloInicio===ci.ciclo.inicio});
+  app.appendChild(el('div',{class:'cartao'},[el('h2',{texto:'Fechar este ciclo'}),
+    el('p',{class:'suave',texto:'Tira uma fotografia do ciclo (metas, ritmo final e métricas) que nunca mais muda. Só dá para fechar depois do último dia útil, e uma vez só.'}),
+    jaFechado?el('p',{class:'ok',texto:'Este ciclo já está fechado.'}):el('button',{class:'primario',type:'button',texto:'Fechar o ciclo',onclick:async function(){
+      if(!confirm('Fechar o ciclo? O retrato não poderá ser alterado.'))return;
+      try{var r=await api(base+'/fechar-ciclo'+qs(),{});telaFechamento('Ciclo fechado. Assinatura '+r.assinatura.slice(0,12)+'…',true)}catch(e){telaFechamento(e.message)}}})]));
+  app.appendChild(el('div',{class:'cartao'},[el('h2',{texto:'Ciclos fechados'}),rs.length?null:el('p',{class:'suave',texto:'Nenhum ainda.'})].concat(rs.map(function(r){
+    var m=r.dados.metricas;
+    return el('div',{class:'passo'},[el('span',{class:'chip '+(r.integro?'no_ritmo':'atras'),texto:r.integro?'Íntegro':'ALTERADO'}),el('span',{texto:data(r.cicloInicio)+' a '+data(r.cicloFim)+' · '+m.vendas.quantidade+' vendas · '+reais(m.vendas.receita)})]);
+  }))));
+  var tipo=el('select',{id:'at'},Object.keys(TIPOS_A).map(function(k){return el('option',{value:k,texto:TIPOS_A[k]})}));
+  var txt=el('textarea',{id:'ax',rows:'3',maxlength:'2000','aria-label':'Texto',style:'width:100%;font:inherit;color:inherit;background:var(--cartao);border:1px solid var(--linha);border-radius:8px;padding:10px'});
+  app.appendChild(el('div',{class:'cartao'},[el('h2',{texto:'Aprendizados e decisões'}),
+    el('form',{onsubmit:async function(e){e.preventDefault();try{await api(base+'/aprendizados',{tipo:tipo.value,texto:txt.value,cicloInicio:ci.ciclo.inicio});telaFechamento('Registrado.',true)}catch(x){telaFechamento(x.message)}}},
+      [el('p',{},[el('label',{for:'at',texto:'O que é'}),tipo]),el('p',{},[el('label',{for:'ax',texto:'O que aprendeu ou decidiu'}),txt]),el('button',{class:'primario',type:'submit',texto:'Registrar'})]),
+    el('p',{class:'suave mini',texto:'Só acrescenta: o que foi escrito fica guardado como memória.'})].concat(ap.map(function(a){return el('p',{},[el('span',{class:'chip sem',texto:TIPOS_A[a.tipo]||a.tipo}),' ',a.texto,a.cicloInicio?el('span',{class:'suave mini',texto:' · ciclo de '+data(a.cicloInicio)}):null])}))));
 }
 async function iniciar(){
   if(!ler('token'))return telaEntrada();

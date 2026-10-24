@@ -14,7 +14,8 @@
     "pack:validar": "tsx scripts/pack-validar.ts",
     "pack:novo": "tsx scripts/pack-novo.ts",
     "pack:schema": "tsx scripts/pack-schema.ts",
-    "db:local": "bash scripts/db-local.sh"
+    "db:local": "bash scripts/db-local.sh",
+    "migracoes:gerar": "tsx scripts/gerar-migracoes.ts"
   },
   "devDependencies": {
     "@types/node": "22.20.5",

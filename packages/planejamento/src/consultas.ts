@@ -9,14 +9,14 @@ export const INDICADORES = ['receita', 'vendas', 'oportunidades', 'reuniao_reali
 const DATA = /^\d{4}-\d{2}-\d{2}$/;
 export const dataValida = (d: string) => DATA.test(d) && !Number.isNaN(Date.parse(d));
 
-export interface Operacao { id: string; slug: string; nome: string; fuso: string; calendario: CalendarioOperacao; janelaHistoricaDias: number }
+export interface Operacao { id: string; slug: string; nome: string; fuso: string; calendario: CalendarioOperacao; janelaHistoricaDias: number; mesInicioAno: number }
 
 export async function operacao(sql: Sql, slug: string): Promise<Operacao | null> {
   const [o] = await sql<any[]>`select id, slug, nome, fuso, pack from lab.operacao where slug = ${slug}`;
   if (!o) return null;
   const c = o.pack?.calendario ?? {};
   return {
-    id: o.id, slug: o.slug, nome: o.nome, fuso: o.fuso, janelaHistoricaDias: o.pack?.parametros?.janelaHistoricaDias ?? 180,
+    id: o.id, slug: o.slug, nome: o.nome, fuso: o.fuso, mesInicioAno: c.mesInicioAno ?? 1, janelaHistoricaDias: o.pack?.parametros?.janelaHistoricaDias ?? 180,
     calendario: { feriados: c.feriados ?? 'BR', diasUteis: c.diasUteis ?? [1, 2, 3, 4, 5], inicioCicloDia: c.inicioCicloDia ?? 1 },
   };
 }
