@@ -10,7 +10,7 @@ export const PAGINA = `<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
-<title>LAB · Produtividade do time</title>
+<title>LAB</title>
 <style>
 :root{--fundo:#f6f7f9;--cartao:#fff;--texto:#16181d;--suave:#5b6270;--linha:#e3e6ec;--ok:#0f7b3f;--ok-f:#e3f4ea;--at:#8a5a00;--at-f:#fff1d6;--ruim:#b3261e;--ruim-f:#fde8e6;--foco:#2457d6}
 @media (prefers-color-scheme:dark){:root{--fundo:#101215;--cartao:#181b20;--texto:#eef0f3;--suave:#9aa3b2;--linha:#2a2f37;--ok:#6fd49a;--ok-f:#12301f;--at:#f2c46b;--at-f:#35280b;--ruim:#ff9a92;--ruim-f:#3a1614;--foco:#8aa9ff}}
@@ -30,7 +30,7 @@ button{cursor:pointer}button.primario{background:var(--foco);border-color:var(--
 .chip{display:inline-block;border-radius:999px;padding:2px 10px;font-size:.85rem;font-weight:600;white-space:nowrap}
 .no_ritmo{background:var(--ok-f);color:var(--ok)}.atencao{background:var(--at-f);color:var(--at)}.atras{background:var(--ruim-f);color:var(--ruim)}.sem{background:var(--linha);color:var(--suave)}
 table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:8px 4px;border-bottom:1px solid var(--linha);font-size:.95rem}
-.erro{color:var(--ruim);font-weight:600}
+.erro{color:var(--ruim);font-weight:600}.ok{color:var(--ok);font-weight:600}.abas{display:flex;gap:8px;margin:0 0 4px}.abas button[aria-current=page]{border-color:var(--foco);font-weight:700}form.linha{display:flex;gap:8px;flex-wrap:wrap;align-items:end}label{display:block;font-size:.85rem;color:var(--suave)}
 </style>
 </head>
 <body>
@@ -41,7 +41,8 @@ var app=document.getElementById('app');
 var NOMES={receita:'Receita (R$)',vendas:'Vendas',oportunidades:'Oportunidades',reuniao_realizada:'Reuniões feitas',agendamento:'Agendamentos',contato:'Contatos',tentativa:'Tentativas',proposta_enviada:'Propostas enviadas'};
 var ROTULO={no_ritmo:'No ritmo',atencao:'Atenção',atras:'Atrás'};
 var PIOR={atras:3,atencao:2,no_ritmo:1};
-var estado={ops:null,slug:null,data:null,pessoa:null};
+var estado={ops:null,slug:null,data:null,pessoa:null,aba:'ritmo'};
+var FUNCOES={sdr:'SDR (prospecta e agenda)',closer:'Closer (fecha)',ambos:'SDR e closer',cs:'Sucesso do cliente',gestor:'Gestor',outro:'Outro'};
 function guardar(k,v){try{if(v==null)sessionStorage.removeItem(k);else sessionStorage.setItem(k,v)}catch(e){}}
 function ler(k){try{return sessionStorage.getItem(k)}catch(e){return null}}
 function el(tag,attrs,filhos){var n=document.createElement(tag);for(var k in (attrs||{})){if(k==='class')n.className=attrs[k];else if(k==='texto')n.textContent=attrs[k];else if(k.slice(0,2)==='on')n.addEventListener(k.slice(2),attrs[k]);else n.setAttribute(k,attrs[k])}(filhos||[]).forEach(function(f){if(f)n.appendChild(typeof f==='string'?document.createTextNode(f):f)});return n}
@@ -54,9 +55,11 @@ async function renovarSessao(){
   try{var r=await fetch('/auth/renovar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({refreshToken:rt})});
     if(!r.ok)return false;var s=await r.json();guardar('token',s.accessToken);guardar('refresh',s.refreshToken);return true}catch(e){return false}
 }
-async function api(caminho,tentou){
-  var r=await fetch(caminho,{headers:{authorization:'Bearer '+(ler('token')||'')}});
-  if(r.status===401){if(!tentou&&await renovarSessao())return api(caminho,true);guardar('token',null);guardar('refresh',null);throw new Error('401')}
+async function api(caminho,corpo,tentou){
+  var o={headers:{authorization:'Bearer '+(ler('token')||'')}};
+  if(corpo){o.method='POST';o.headers['content-type']='application/json';o.body=JSON.stringify(corpo)}
+  var r=await fetch(caminho,o);
+  if(r.status===401){if(!tentou&&await renovarSessao())return api(caminho,corpo,true);guardar('token',null);guardar('refresh',null);throw new Error('401')}
   if(!r.ok){var c={};try{c=await r.json()}catch(e){}throw new Error(c.erro||('erro '+r.status))}
   return r.json();
 }
@@ -92,6 +95,10 @@ function controles(){
   var sair=el('button',{type:'button',texto:'Sair',onclick:function(){guardar('token',null);guardar('refresh',null);iniciar()}});
   return el('div',{class:'barra'},[estado.ops.length>1?sel:null,dt,hoje,sair]);
 }
+function abas(){
+  function b(id,t){var x=el('button',{type:'button',texto:t,onclick:function(){estado.aba=id;estado.pessoa=null;desenhar()}});if(estado.aba===id)x.setAttribute('aria-current','page');return x}
+  return el('div',{class:'abas'},[b('ritmo','Ritmo do time'),b('equipe','Equipe e metas')]);
+}
 function agrupar(linhas){
   var por={};
   linhas.forEach(function(l){var k=l.pessoaId||'_op';(por[k]=por[k]||{id:k,nome:l.pessoa||'Operação',linhas:[]}).linhas.push(l)});
@@ -99,6 +106,7 @@ function agrupar(linhas){
 }
 async function desenhar(){
   limpar();
+  if(estado.aba==='equipe')return telaEquipe();
   app.appendChild(el('p',{class:'suave',texto:'Carregando…'}));
   var q=estado.data?('?data='+encodeURIComponent(estado.data)):'';
   var r;
@@ -114,6 +122,7 @@ function tela(grupos,r){
   var pessoas=grupos.filter(function(g){return g.id!=='_op'});
   var comMeta=pessoas.filter(function(g){return g.status});
   var certos=comMeta.filter(function(g){return g.status==='no_ritmo'}).length;
+  app.appendChild(abas());
   cabecalho('O time está no ritmo?','Dia '+data(r.hoje)+' · dia útil '+r.ciclo.diasUteisPassados+' de '+r.ciclo.diasUteis+' do ciclo').forEach(function(n){if(n)app.appendChild(n)});
   app.appendChild(controles());
   if(!grupos.length){
@@ -140,6 +149,43 @@ function detalhe(g,r){
   var tabela=el('table',{},[el('thead',{},[el('tr',{},['O que','Feito / esperado até hoje','Ritmo','Plano p/ amanhã'].map(function(t){return el('th',{texto:t})}))]),el('tbody',{},linhas)]);
   app.appendChild(el('div',{class:'cartao'},[tabela]));
   app.appendChild(el('p',{class:'suave',texto:'“Esperado” divide a meta do ciclo igualmente pelos dias úteis. “Plano p/ amanhã” é quanto fazer por dia, daqui para frente, para ainda bater a meta.'}));
+}
+async function telaEquipe(msg,ok){
+  limpar();
+  var pes,ci;
+  try{
+    var base='/admin/operacoes/'+encodeURIComponent(estado.slug);
+    pes=await api(base+'/pessoas');ci=await api(base+'/ciclo'+(estado.data?('?data='+encodeURIComponent(estado.data)):''));
+  }catch(e){if(e.message==='401')return telaEntrada('Acesso recusado. Entre de novo.');app.appendChild(el('p',{class:'erro',texto:'Não consegui carregar: '+e.message}));return}
+  app.appendChild(abas());
+  app.appendChild(el('h1',{texto:'Equipe e metas'}));
+  app.appendChild(el('p',{class:'suave',texto:'Ciclo de '+data(ci.ciclo.inicio)+' a '+data(ci.ciclo.fim)+' · '+ci.ciclo.diasUteis+' dias úteis'}));
+  app.appendChild(controles());
+  if(msg)app.appendChild(el('p',{class:ok?'ok':'erro',texto:msg}));
+  /* equipe */
+  var lista=pes.map(function(p){
+    return el('div',{class:'pessoa'},[el('span',{texto:p.nome+' · '+(FUNCOES[p.funcao]||p.funcao||'—')+(p.ativa?'':' (inativa)')}),
+      el('button',{type:'button',texto:p.ativa?'Desativar':'Reativar',onclick:async function(){try{await api(base+'/pessoas/'+p.id,{ativa:!p.ativa});telaEquipe()}catch(e){telaEquipe(e.message)}}})]);
+  });
+  var nome=el('input',{type:'text',id:'pn',maxlength:'120',autocomplete:'off'});
+  var fun=el('select',{id:'pf'},Object.keys(FUNCOES).map(function(k){return el('option',{value:k,texto:FUNCOES[k]})}));
+  app.appendChild(el('div',{class:'cartao'},[el('h2',{texto:'Quem está no time'}),pes.length?null:el('p',{class:'suave',texto:'Ninguém cadastrado ainda.'})].concat(lista).concat([
+    el('form',{class:'linha',onsubmit:async function(e){e.preventDefault();try{await api(base+'/pessoas',{nome:nome.value,funcao:fun.value});telaEquipe('Pessoa adicionada.',true)}catch(x){telaEquipe(x.message)}}},
+      [el('div',{},[el('label',{for:'pn',texto:'Nome'}),nome]),el('div',{},[el('label',{for:'pf',texto:'Função'}),fun]),el('button',{class:'primario',type:'submit',texto:'Adicionar'})])])));
+  /* metas */
+  var nomes={};pes.forEach(function(p){nomes[p.id]=p.nome});
+  var ativas=pes.filter(function(p){return p.ativa});
+  var ind=el('select',{id:'mi'},Object.keys(NOMES).map(function(k){return el('option',{value:k,texto:NOMES[k]})}));
+  var quem=el('select',{id:'mq'},[el('option',{value:'',texto:'Operação inteira'})].concat(ativas.map(function(p){return el('option',{value:p.id,texto:p.nome})})));
+  var val=el('input',{type:'number',id:'mv',min:'0',step:'any',inputmode:'decimal'});
+  var vig=ci.metas.map(function(m){return el('tr',{},[el('td',{texto:m.pessoaId?(nomes[m.pessoaId]||'—'):'Operação inteira'}),el('td',{texto:NOMES[m.indicador]||m.indicador}),el('td',{texto:numero(m.valor)})])});
+  app.appendChild(el('div',{class:'cartao'},[el('h2',{texto:'Metas do ciclo'}),
+    el('p',{class:'suave',texto:'A meta é para o ciclo inteiro. Para mudar, salve outro valor: vale o mais recente e o anterior fica guardado.'}),
+    el('form',{class:'linha',onsubmit:async function(e){e.preventDefault();
+      var v=Number(val.value);if(!(v>=0)||val.value==='')return telaEquipe('Informe um valor.');
+      try{await api(base+'/metas'+(estado.data?('?data='+encodeURIComponent(estado.data)):''),{metas:[{indicador:ind.value,pessoaId:quem.value||null,valor:v}]});telaEquipe('Meta salva.',true)}catch(x){telaEquipe(x.message)}}},
+      [el('div',{},[el('label',{for:'mq',texto:'De quem'}),quem]),el('div',{},[el('label',{for:'mi',texto:'O que'}),ind]),el('div',{},[el('label',{for:'mv',texto:'Meta do ciclo'}),val]),el('button',{class:'primario',type:'submit',texto:'Salvar meta'})]),
+    vig.length?el('table',{},[el('thead',{},[el('tr',{},['De quem','O que','Meta'].map(function(t){return el('th',{texto:t})}))]),el('tbody',{},vig)]):el('p',{class:'suave',texto:'Nenhuma meta neste ciclo.'})]));
 }
 async function iniciar(){
   if(!ler('token'))return telaEntrada();

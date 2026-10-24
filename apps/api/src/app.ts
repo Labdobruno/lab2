@@ -17,13 +17,16 @@
      POST /admin/conectores/:id/processar       reprocessa pendentes e erros
      GET  /admin/conectores/:id/saude           execuções, entradas por status, erros e o que revisar
      GET  /admin/metricas/dicionario            definição de cada número
+     GET  /admin/operacoes/:slug/pessoas        equipe
+     POST /admin/operacoes/:slug/pessoas        { nome, funcao }
+     POST /admin/operacoes/:slug/pessoas/:id    { nome?, funcao?, ativa? }
      GET  /admin/operacoes/:slug/ciclo?data=    ciclo, dias úteis e metas vigentes
      POST /admin/operacoes/:slug/metas          { cicloInicio?, metas: [{ indicador, valor, pessoaId?, nota? }] } só acrescenta
      GET  /admin/operacoes/:slug/buildup?receita=&data=&ticket=   sugestão de metas, de receita até tentativas (não grava)
      GET  /admin/operacoes/:slug/ritmo?data=    esperado até hoje, quem está no ritmo e quem está atrás
      GET  /admin/operacoes/:slug/fechamento-do-dia?data=
      GET  /admin/operacoes/:slug/metricas?de=AAAA-MM-DD&ate=AAAA-MM-DD   canais, coorte, fluxo, vendas e retenção (somente leitura) */
-import { resolverPack } from '@lab/nucleo';
+import { FUNCOES_PESSOA, resolverPack } from '@lab/nucleo';
 import {
   atualizarPackDaOperacao, carregarConector, conectorDoTipo, criarOperacao, iguaisSeguro, importar, processarPendentes,
   receberWebhook, sincronizar, CONECTORES, type Dependencias, type LinhaConector,
@@ -70,7 +73,7 @@ export function criarApp(opts: { sql: Sql; env: Ambiente; fetch?: typeof fetch; 
   }
 
   async function admin(req: Request, partes: string[], url: URL): Promise<Response> {
-    const [recurso, id, acao] = partes;
+    const [recurso, id, acao, sub] = partes;
     const m = req.method;
 
     if (recurso === 'packs' && m === 'GET') {
@@ -90,6 +93,29 @@ export function criarApp(opts: { sql: Sql; env: Ambiente; fetch?: typeof fetch; 
         } catch (e) {
           const msg = (e as Error).message;
           return erro(/duplicate key|unique/i.test(msg) ? `já existe uma operação "${b.slug}"` : msg, /unique/i.test(msg) ? 409 : 400);
+        }
+      }
+      if (id && acao === 'pessoas') {
+        const [op] = await sql<{ id: string }[]>`select id from lab.operacao where slug = ${id}`;
+        if (!op) return erro('operação não encontrada', 404);
+        if (!sub && m === 'GET') return json(await sql`select id, nome, funcao, ativa from lab.pessoa where operacao_id = ${op.id} order by ativa desc, nome`);
+        if (!sub && m === 'POST') {
+          const b = await corpoJSON(req);
+          const nome = typeof b.nome === 'string' ? b.nome.trim() : '';
+          if (!nome || nome.length > 120) return erro('informe o nome');
+          if (typeof b.funcao !== 'string' || !(FUNCOES_PESSOA as readonly string[]).includes(b.funcao)) return erro(`funcao deve ser: ${FUNCOES_PESSOA.join(', ')}`);
+          const [p] = await sql`insert into lab.pessoa (operacao_id, nome, funcao) values (${op.id}, ${nome}, ${b.funcao}) returning id, nome, funcao, ativa`;
+          return json(p, 201);
+        }
+        if (sub && UUID.test(sub) && m === 'POST') {
+          const b = await corpoJSON(req);
+          const nome = typeof b.nome === 'string' ? b.nome.trim() : null;
+          if (nome !== null && (!nome || nome.length > 120)) return erro('nome inválido');
+          if (b.funcao != null && (typeof b.funcao !== 'string' || !(FUNCOES_PESSOA as readonly string[]).includes(b.funcao))) return erro(`funcao deve ser: ${FUNCOES_PESSOA.join(', ')}`);
+          if (b.ativa != null && typeof b.ativa !== 'boolean') return erro('ativa deve ser verdadeiro ou falso');
+          const [p] = await sql`update lab.pessoa set nome = coalesce(${nome}, nome), funcao = coalesce(${(b.funcao as string | undefined) ?? null}, funcao), ativa = coalesce(${(b.ativa as boolean | undefined) ?? null}, ativa)
+            where id = ${sub} and operacao_id = ${op.id} returning id, nome, funcao, ativa`;
+          return p ? json(p) : erro('pessoa não encontrada', 404);
         }
       }
       if (id && ['ciclo', 'metas', 'buildup', 'ritmo', 'fechamento-do-dia'].includes(acao ?? '')) {

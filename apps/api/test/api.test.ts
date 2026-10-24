@@ -63,6 +63,20 @@ describe.skipIf(semBanco)('API', () => {
     expect((await chamar('GET', '/admin/operacoes/nao-existe/metricas?de=2026-10-01&ate=2026-11-01')).status).toBe(404);
   });
 
+  it('equipe e metas pela API', async () => {
+    await chamar('POST', '/admin/operacoes', { slug: 'eq', nome: 'Equipe', packId: 'base' });
+    expect((await chamar('POST', '/admin/operacoes/eq/pessoas', { nome: 'Sara', funcao: 'chefe' })).status).toBe(400);
+    expect((await chamar('POST', '/admin/operacoes/eq/pessoas', { nome: '  ', funcao: 'sdr' })).status).toBe(400);
+    const p = await (await chamar('POST', '/admin/operacoes/eq/pessoas', { nome: ' Sara ', funcao: 'sdr' })).json() as any;
+    expect(p).toMatchObject({ nome: 'Sara', funcao: 'sdr', ativa: true });
+    expect((await (await chamar('POST', `/admin/operacoes/eq/pessoas/${p.id}`, { ativa: false })).json() as any).ativa).toBe(false);
+    expect((await chamar('POST', '/admin/operacoes/eq/pessoas/00000000-0000-4000-8000-000000000000', { ativa: false })).status).toBe(404);
+    expect((await chamar('POST', '/admin/operacoes/eq/metas?data=2026-10-10', { metas: [{ indicador: 'tentativa', pessoaId: p.id, valor: 4000 }] })).status).toBe(201);
+    const c = await (await chamar('GET', '/admin/operacoes/eq/ciclo?data=2026-10-10')).json() as any;
+    expect(c.metas).toEqual([{ indicador: 'tentativa', pessoaId: p.id, valor: 4000 }]);
+    expect((await chamar('GET', '/admin/operacoes/nao-existe/pessoas')).status).toBe(404);
+  });
+
   it('lista packs válidos', async () => {
     const r = await (await chamar('GET', '/admin/packs')).json() as any[];
     expect(r.every(p => p.ok)).toBe(true);
