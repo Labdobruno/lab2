@@ -12,6 +12,9 @@
       ],
       "@lab/conectores": [
         "packages/conectores/src/index.ts"
+      ],
+      "@lab/metricas": [
+        "packages/metricas/src/index.ts"
       ]
     }
   },

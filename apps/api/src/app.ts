@@ -11,12 +11,15 @@
      POST /admin/conectores/:id/sincronizar
      POST /admin/conectores/:id/importar?nome=<arquivo.csv>   corpo = conteúdo do arquivo
      POST /admin/conectores/:id/processar       reprocessa pendentes e erros
-     GET  /admin/conectores/:id/saude           execuções, entradas por status, erros e o que revisar */
+     GET  /admin/conectores/:id/saude           execuções, entradas por status, erros e o que revisar
+     GET  /admin/metricas/dicionario            definição de cada número
+     GET  /admin/operacoes/:slug/metricas?de=AAAA-MM-DD&ate=AAAA-MM-DD   canais, coorte, fluxo, vendas e retenção (somente leitura) */
 import { resolverPack } from '@lab/nucleo';
 import {
   atualizarPackDaOperacao, carregarConector, conectorDoTipo, criarOperacao, iguaisSeguro, importar, processarPendentes,
   receberWebhook, sincronizar, CONECTORES, type Dependencias, type LinhaConector,
 } from '@lab/conectores';
+import { DICIONARIO, operacaoPorSlug, relatorio, validarPeriodo } from '@lab/metricas';
 import type { Sql } from 'postgres';
 import { CATALOGO } from './catalogo.js';
 
@@ -60,6 +63,8 @@ export function criarApp(opts: { sql: Sql; env: Ambiente; fetch?: typeof fetch; 
       return json(Object.keys(CATALOGO).map(p => { const r = resolverPack(p, CATALOGO); return { id: p, ok: r.ok, versao: r.pack?.versao, linhagem: r.pack?.linhagem, erros: r.erros, avisos: r.avisos }; }));
     }
 
+    if (recurso === 'metricas' && id === 'dicionario' && m === 'GET') return json(DICIONARIO);
+
     if (recurso === 'operacoes') {
       if (!id && m === 'GET') return json(await sql`select id, slug, nome, pack_id, pack_versao, ativa, criado_em from lab.operacao order by criado_em`);
       if (!id && m === 'POST') {
@@ -72,6 +77,14 @@ export function criarApp(opts: { sql: Sql; env: Ambiente; fetch?: typeof fetch; 
           const msg = (e as Error).message;
           return erro(/duplicate key|unique/i.test(msg) ? `já existe uma operação "${b.slug}"` : msg, /unique/i.test(msg) ? 409 : 400);
         }
+      }
+      if (id && acao === 'metricas' && m === 'GET') {
+        const op = await operacaoPorSlug(sql, id);
+        if (!op) return erro('operação não encontrada', 404);
+        const periodo = { de: url.searchParams.get('de') ?? '', ate: url.searchParams.get('ate') ?? '' };
+        const invalido = validarPeriodo(periodo);
+        if (invalido) return erro(invalido);
+        return json({ operacao: op.slug, ...(await relatorio(sql, op, periodo)) });
       }
       if (id && acao === 'pack' && m === 'POST') {
         const [op] = await sql<{ id: string }[]>`select id from lab.operacao where slug = ${id}`;

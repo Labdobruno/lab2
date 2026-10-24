@@ -47,6 +47,11 @@ describe.skipIf(semBanco)('API', () => {
     expect((await semToken(new Request('https://lab.teste/admin/operacoes'))).status).toBe(503);
   });
 
+  it('métricas: dicionário, período inválido e operação inexistente', async () => {
+    expect(((await (await chamar('GET', '/admin/metricas/dicionario')).json()) as any[]).some(m => m.chave === 'cac')).toBe(true);
+    expect((await chamar('GET', '/admin/operacoes/nao-existe/metricas?de=2026-10-01&ate=2026-11-01')).status).toBe(404);
+  });
+
   it('lista packs válidos', async () => {
     const r = await (await chamar('GET', '/admin/packs')).json() as any[];
     expect(r.every(p => p.ok)).toBe(true);

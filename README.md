@@ -4,7 +4,7 @@ Central de inteligência de receita do Bruno. Cobre o funil borboleta inteiro: g
 
 > O LAB V2 é um projeto novo e independente. Ele **não altera nada** no CRM ou no LAB da Amicta: quando a Amicta entrar, entra como uma operação a mais, lida pela API pública do CRM, somente leitura.
 
-## O que já existe (fase 1: base e conectores)
+## O que já existe (fases 1 e 2: base, conectores e métricas)
 
 | Peça | O que faz | Onde |
 |---|---|---|
@@ -14,8 +14,9 @@ Central de inteligência de receita do Bruno. Cobre o funil borboleta inteiro: g
 | Banco | Modelo canônico por operação, histórico de etapas só de acréscimo, entradas brutas guardadas para sempre | `supabase/migrations/` |
 | Conectores | Webhook canônico (n8n, Make, scripts), planilha CSV e CRM Amicta v1 | `packages/conectores/src/fontes/` |
 | API | Cloudflare Worker: entrada de webhooks, importação, sincronização, saúde, cron a cada 15 min | `apps/api/` |
+| Métricas (fase 2) | Dicionário e funções puras: CPL, CAC, ROI, payback, MC, conversão por coorte (Wilson), fluxo, churn, retenção e LTV | `packages/metricas/`, `GET /admin/operacoes/:slug/metricas` |
 
-O que ainda **não** existe: métricas, planejamento, produtividade, telas. A ordem de construção está em [`docs/roteiro.md`](docs/roteiro.md).
+O que ainda **não** existe: planejamento, produtividade, telas. A ordem de construção está em [`docs/roteiro.md`](docs/roteiro.md).
 
 ## Como as peças se encaixam
 
