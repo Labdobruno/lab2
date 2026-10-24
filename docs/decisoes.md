@@ -55,3 +55,15 @@ Cada decisão tem o porquê, para não ser refeita sem motivo.
 - **Funis desenhados** são versionados (cada gravação é uma versão nova; só acréscimo).
 - **Campanha:** orçamento ÷ CPL = leads → funil → vendas, receita, CAC, ROI e margem. O plano é uma fotografia (o banco impede mudar). O andamento só avança (planejada → rodando → encerrada). Ao encerrar, mede o realizado (leads do canal criados no período, vendas e receita deles) e escreve plano × realizado na memória comercial. O investimento realizado vem do que você informar ao encerrar; sem isso, dos lançamentos mensais do canal nos meses da campanha, o que pode incluir outras campanhas do mesmo canal.
 - **Tela:** o grafo é desenhado em SVG, sem biblioteca. Quando a tela é redesenhada, as buscas da versão anterior são descartadas, para duas atualizações seguidas não duplicarem conteúdo.
+
+## Onda 1: plano do dia e rituais
+
+- **A V1 é o contrato de cálculo.** As regras puras foram portadas 1:1 (`packages/dia/src/producao.ts`, `motor.ts`) e os testes da V1 rodam com os mesmos números (22 em 5 = 4,4,5,4,5; atraso 20 com janela 5 → alvo 14; adiantado 25 → 0 a fazer; cenários 16/46/86; gargalo 5% vs 10%; capacidade p80 = 84).
+- **Três rituais em vez de "meio dia".** A V1 perguntava se já era meio-dia; a V2 lê o mesmo plano em três momentos (manhã 0, tarde ½, fim 1) e o "esperado até agora" usa essa fração. O ritual padrão segue a hora local; dias passados são lidos como fim do dia.
+- **Dias úteis da pessoa.** A meta do ciclo é distribuída nos dias úteis da operação menos as ausências da pessoa (`lab.pessoa_ausencia`). Num dia sem trabalho não há meta nem recuperação.
+- **Mínimo diário só na atividade principal** (SDR: agendamento; closer: reunião realizada). Aplicado a vendas inflaria uma meta de 4 no mês para 21. Descoberto no teste de tela e corrigido antes de publicar.
+- **Fonte única do feito**: `realizados()` do planejamento (atividades por papel, negócios ganhos, passagens a oportunidade) mais os lançamentos do administrador, que são só de acréscimo, com motivo e desfeitos por um lançamento contrário.
+- **Fotos imutáveis** por pessoa, dia e ritual, assinadas como os retratos de ciclo; o banco impede alterar. A memória plano × executado é lida delas, não recalculada.
+- **Sem fonte ≠ zero.** Tarefas, agenda, cadência e próximo passo não existem na V2 ainda; o plano diz "sem fonte" e não conta como zero.
+- **Correções na V2 antiga**: `metaDoDia` usava `ceil(meta ÷ dias úteis)` (somava mais que a meta); o build-up arredondava a cada degrau (inflava tentativas). Ambos corrigidos em `packages/planejamento` com testes.
+- **Uma pergunta por tela.** Manhã: "O que fazer hoje para o dia ser um sucesso?"; tarde: "Como está o dia até agora?"; fim: "O dia foi um sucesso?"; gestor: "Quem precisa de mim hoje?". Situação do ciclo, taxas, gargalo e ajustes do administrador ficam fechados em "detalhes".
