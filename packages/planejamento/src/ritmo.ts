@@ -4,6 +4,14 @@ export type StatusRitmo = 'no_ritmo' | 'atencao' | 'atras' | null;
 
 export const LIMITE_NO_RITMO = 1, LIMITE_ATENCAO = 0.85;
 
+/* meta inteira do k-ésimo dia útil (0-based) de um ciclo com du dias úteis: floor(T(k+1)/du) − floor(Tk/du).
+   As parcelas somam exatamente T e nunca diferem em mais de 1 (22 em 5 dias = 4, 4, 5, 4, 5; "ceil" daria 5 todo dia e 25 no ciclo). */
+export function metaDiaInteira(T: number, k: number, du: number): number {
+  T = Math.round(Number(T) || 0);
+  if (!(du > 0) || k < 0 || k >= du) return 0;
+  return Math.floor((T * (k + 1)) / du) - Math.floor((T * k) / du);
+}
+
 /* linear pelos dias úteis: meta × (dias úteis até hoje, inclusive ÷ dias úteis do ciclo) */
 export function esperadoAteHoje(meta: number, uteisDoCiclo: string[], hoje: string): number {
   if (!uteisDoCiclo.length) return 0;
@@ -45,7 +53,7 @@ export function fechamentoDoDia(args: { dia: string; ciclo: { inicio: string; fi
     const noCiclo = acumulado(realizados, chave, dia, ciclo.inicio);
     const esperado = esperadoAteHoje(m.valor, uteis, dia);
     return {
-      ...chave, metaDoCiclo: m.valor, metaDoDia: uteis.length ? Math.ceil(m.valor / uteis.length) : 0,
+      ...chave, metaDoCiclo: m.valor, metaDoDia: metaDiaInteira(m.valor, uteis.indexOf(dia), uteis.length),
       realizadoNoDia: realizados.filter(r => r.pessoaId === m.pessoaId && r.indicador === m.indicador && r.dia === dia).reduce((s, r) => s + r.quantidade, 0),
       realizadoNoCiclo: noCiclo, esperadoAteHoje: Math.round(esperado * 100) / 100, status: statusDoRitmo(noCiclo, esperado),
       planoAmanha: amanha ? contingencia(m.valor, noCiclo, uteis, amanha).necessarioPorDia : null,

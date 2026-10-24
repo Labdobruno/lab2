@@ -1,5 +1,7 @@
 /* Build-up reverso único: receita → vendas → oportunidades → reuniões → agendamentos → contatos → tentativas.
-   Por pessoa, por canal e por dia útil. Taxa ausente interrompe a cadeia: não se inventa conversão. */
+   Por pessoa, por canal e por dia útil. Taxa ausente interrompe a cadeia: não se inventa conversão.
+   A cadeia anda em frações exatas e cada número só é arredondado (para cima) uma vez, na hora de virar meta:
+   arredondar a cada degrau acumulava o erro e inflava as tentativas. */
 import type { FuncaoPessoa } from '@lab/nucleo';
 
 export const CADEIA = ['vendas', 'oportunidades', 'reuniao_realizada', 'agendamento', 'contato', 'tentativa'] as const;
@@ -32,28 +34,31 @@ export function buildupReverso(e: EntradaBuildup): SaidaBuildup {
   const avisos: string[] = [];
   const totais: Partial<Record<Degrau, number>> = {};
   if (!(e.ticketMedio && e.ticketMedio > 0)) return { ok: false, avisos: ['sem ticket médio: não dá para converter receita em vendas'], totais, porDia: {}, porPessoa: [], porCanal: {} };
-  let qtd = Math.ceil(e.receita / e.ticketMedio);
-  totais.vendas = qtd;
+  const exato: Partial<Record<Degrau, number>> = {};
+  const cima = (x: number) => Math.ceil(x - 1e-9);
+  let qtd = e.receita / e.ticketMedio;
+  exato.vendas = qtd;
   for (const degrau of CADEIA.slice(1)) {
     const taxa = e.taxas[degrau];
     if (!taxa || taxa <= 0 || taxa > 1) { avisos.push(`sem taxa válida para "${degrau}": a cadeia para em "${CADEIA[CADEIA.indexOf(degrau) - 1]}"`); break; }
-    qtd = Math.ceil(qtd / taxa);
-    totais[degrau] = qtd;
+    qtd = qtd / taxa;
+    exato[degrau] = qtd;
   }
-  const degraus = Object.keys(totais) as Degrau[];
-  const porDia = Object.fromEntries(degraus.map(d => [d, e.diasUteis > 0 ? Math.ceil(totais[d]! / e.diasUteis) : null])) as Partial<Record<Degrau, number>>;
+  const degraus = Object.keys(exato) as Degrau[];
+  for (const d of degraus) totais[d] = cima(exato[d]!);
+  const porDia = Object.fromEntries(degraus.map(d => [d, e.diasUteis > 0 ? cima(exato[d]! / e.diasUteis) : null])) as Partial<Record<Degrau, number>>;
 
   const porPessoa = (e.pessoas ?? []).map(p => ({ pessoaId: p.id, nome: p.nome, metas: {} as Partial<Record<Degrau, number>> }));
   for (const d of degraus) {
     const elegiveis = (e.pessoas ?? []).filter(p => p.funcao && QUEM[d].includes(p.funcao));
     if (!elegiveis.length) { if (e.pessoas?.length) avisos.push(`ninguém com função para "${d}"`); continue; }
-    const cota = Math.ceil(totais[d]! / elegiveis.length);
+    const cota = cima(exato[d]! / elegiveis.length);
     for (const p of elegiveis) porPessoa.find(x => x.pessoaId === p.id)!.metas[d] = cota;
   }
 
   const shares = e.canais ?? { total: 1 };
   const soma = Object.values(shares).reduce((s, x) => s + x, 0);
   if (Math.abs(soma - 1) > 0.001) avisos.push(`a participação dos canais soma ${soma.toFixed(3)}, não 1`);
-  const porCanal = Object.fromEntries(Object.entries(shares).map(([c, s]) => [c, Object.fromEntries(degraus.map(d => [d, Math.ceil(totais[d]! * s)]))])) as SaidaBuildup['porCanal'];
+  const porCanal = Object.fromEntries(Object.entries(shares).map(([c, s]) => [c, Object.fromEntries(degraus.map(d => [d, cima(exato[d]! * s)]))])) as SaidaBuildup['porCanal'];
   return { ok: degraus.length === CADEIA.length, avisos, totais, porDia, porPessoa, porCanal };
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildupReverso, cicloDe, contingencia, diasUteis, ehDiaUtil, esperadoAteHoje, feriadosBR, fechamentoDoDia, statusDoRitmo } from '../src/index.js';
+import { buildupReverso, cicloDe, contingencia, diasUteis, ehDiaUtil, esperadoAteHoje, feriadosBR, fechamentoDoDia, metaDiaInteira, statusDoRitmo } from '../src/index.js';
 
 const cal = { feriados: 'BR' as const, diasUteis: [1, 2, 3, 4, 5], inicioCicloDia: 1 };
 
@@ -47,11 +47,26 @@ describe('build-up reverso', () => {
     expect(r.totais).toEqual({ vendas: 5, oportunidades: 10 });
     expect(r.avisos[0]).toMatch(/reuniao_realizada/);
   });
+  it('frações exatas na cadeia, arredondadas uma vez: não infla por degrau', () => {
+    /* 95.000 ÷ 10.000 = 9,5 vendas → 38 oportunidades exatas; arredondando por degrau seriam 10 → 40 → 80 → 100 → 200 → 800 */
+    const r = buildupReverso({ receita: 95_000, ticketMedio: 10_000, taxas, diasUteis: 20, pessoas: [{ id: 'a', nome: 'A', funcao: 'closer' }, { id: 'b', nome: 'B', funcao: 'closer' }, { id: 'c', nome: 'C', funcao: 'closer' }] });
+    expect(r.totais).toEqual({ vendas: 10, oportunidades: 38, reuniao_realizada: 76, agendamento: 95, contato: 190, tentativa: 760 });
+    expect(r.porDia).toEqual({ vendas: 1, oportunidades: 2, reuniao_realizada: 4, agendamento: 5, contato: 10, tentativa: 38 });
+    expect(r.porPessoa.map(p => p.metas.vendas)).toEqual([4, 4, 4]);   // 9,5 ÷ 3 = 3,17 → 4 cada, e não ceil(10 ÷ 3) sobre um total já arredondado
+  });
   it('sem ticket não calcula', () => expect(buildupReverso({ receita: 1, ticketMedio: null, taxas, diasUteis: 20 }).ok).toBe(false));
 });
 
 describe('ritmo', () => {
   const uteis = diasUteis('2026-10-01', '2026-11-01', cal);
+  it('meta do dia é inteira e as parcelas somam a meta do ciclo (22 em 5 dias = 4, 4, 5, 4, 5)', () => {
+    expect([0, 1, 2, 3, 4].map(k => metaDiaInteira(22, k, 5))).toEqual([4, 4, 5, 4, 5]);
+    expect([0, 1, 2].map(k => metaDiaInteira(10, k, 3)).reduce((a, b) => a + b, 0)).toBe(10);   // ceil(10/3) = 4 daria 12
+    expect(metaDiaInteira(5, 7, 5)).toBe(0);
+    const porDia = uteis.map((_, k) => metaDiaInteira(200, k, uteis.length));
+    expect(porDia.reduce((a, b) => a + b, 0)).toBe(200);
+    expect(Math.max(...porDia) - Math.min(...porDia)).toBeLessThanOrEqual(1);
+  });
   it('esperado é linear pelos dias úteis', () => {
     expect(esperadoAteHoje(210, uteis, '2026-10-10')).toBe(70);    // 7 dias úteis até 10/10 (1,2,5,6,7,8,9 → 7? 01,02,05,06,07,08,09)
     expect(esperadoAteHoje(210, uteis, '2026-09-30')).toBe(0);

@@ -10,11 +10,8 @@ export const VERSAO_REGRAS = '2026-10-29.1';
 /* ---------- metas diárias inteiras: a soma dos dias é exatamente a meta do mês ---------- */
 
 /* meta inteira do dia k (0-based) de uma meta T distribuída em du dias úteis (metas_dia.test: 22 em 5 = 4,4,5,4,5) */
-export function metaDiaInteira(T: number, k: number, du: number): number {
-  T = Math.round(Number(T) || 0);
-  if (!(du > 0) || k < 0 || k >= du) return 0;
-  return Math.floor((T * (k + 1)) / du) - Math.floor((T * k) / du);
-}
+import { metaDiaInteira } from '@lab/planejamento';
+export { metaDiaInteira };
 
 /* reparte um total em partes inteiras pelos pesos (lpoDistribuir): acumula, arredonda para baixo, o último absorve o resto.
    Sem pesos válidos, partes iguais. Sem pesos equivale a metaDiaInteira. */
