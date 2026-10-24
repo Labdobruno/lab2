@@ -12,8 +12,9 @@ import { INDICADORES_DIA, NOMES, type DadosDia, type LeadNovo, type NegocioAtenc
 export class ErroDoDia extends Error { constructor(m: string, readonly status = 400) { super(m); } }
 const DATA = /^\d{4}-\d{2}-\d{2}$/;
 const FUNCAO_NOME: Record<string, string> = { sdr: 'Pré-vendas', closer: 'Vendas', ambos: 'Pré-vendas e vendas', cs: 'Sucesso do cliente', gestor: 'Gestão', outro: '' };
-/* etapa principal por função (mínimo de 1 por dia trabalhado): SDR agenda; closer realiza, qualifica e vende; "os dois" fazem tudo */
-const PRINCIPAL: Record<string, string[]> = { sdr: ['agendamento', 'tentativa'], closer: ['reuniao_realizada', 'oportunidades', 'vendas'], ambos: ['agendamento', 'reuniao_realizada', 'tentativa'] };
+/* etapa principal por função (mínimo de 1 por dia trabalhado, regra da V1): SDR agenda, closer realiza reunião. Vale só para atividade;
+   nunca para resultado (oportunidades, vendas), que não cabe "1 por dia" quando a meta do ciclo é menor que os dias úteis */
+const PRINCIPAL: Record<string, string[]> = { sdr: ['agendamento'], closer: ['reuniao_realizada'], ambos: ['agendamento', 'reuniao_realizada'] };
 
 export interface Pessoa { id: string; nome: string; funcao: string | null; capacidadeDia: number | null; ativa: boolean }
 interface NegocioAberto { id: string; nome: string; dono_id: string | null; etapa_chave: string; etapa_nome: string; papel: string; ordem: number; prazo_dias: number | null; primeira: boolean; etapa_desde: string | null; criado_em: string; valor: number; ultima_atividade: string | null; canal: string | null }

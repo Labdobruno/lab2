@@ -4,6 +4,8 @@
 
 export const CSP = "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
 
+import { TELA_DIA } from './tela_dia.js';
+
 export const PAGINA = `<!doctype html>
 <html lang="pt-BR">
 <head>
@@ -30,7 +32,8 @@ button{cursor:pointer}button.primario{background:var(--foco);border-color:var(--
 .chip{display:inline-block;border-radius:999px;padding:2px 10px;font-size:.85rem;font-weight:600;white-space:nowrap}
 .no_ritmo{background:var(--ok-f);color:var(--ok)}.atencao{background:var(--at-f);color:var(--at)}.atras{background:var(--ruim-f);color:var(--ruim)}.sem{background:var(--linha);color:var(--suave)}
 table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:8px 4px;border-bottom:1px solid var(--linha);font-size:.95rem}
-.erro{color:var(--ruim);font-weight:600}.ok{color:var(--ok);font-weight:600}.abas{display:flex;gap:8px;margin:0 0 4px;flex-wrap:wrap}.passo{display:flex;gap:10px;align-items:center;padding:6px 0}.num{display:inline-flex;width:28px;height:28px;border-radius:50%;align-items:center;justify-content:center;font-weight:700;border:2px solid var(--linha);flex:none}.num.feito{background:var(--ok-f);border-color:var(--ok);color:var(--ok)}.num.agora{border-color:var(--foco);color:var(--foco)}.cenarios{display:grid;gap:8px}.mini{font-size:.9rem}.svgbox{overflow-x:auto;border:1px solid var(--linha);border-radius:8px;padding:6px}.svgbox svg{display:block}.svgbox text{fill:var(--texto);font:11px system-ui,sans-serif}details{margin:8px 0}summary{cursor:pointer;min-height:44px;display:flex;align-items:center}textarea,.largo{width:100%;font:inherit;color:inherit;background:var(--cartao);border:1px solid var(--linha);border-radius:8px;padding:10px}.valor{font-size:1.5rem;font-weight:700}ul.ev{margin:6px 0;padding-left:18px}.alta{background:var(--ruim-f);color:var(--ruim)}.media{background:var(--at-f);color:var(--at)}.baixa{background:var(--linha);color:var(--suave)}.abas button[aria-current=page]{border-color:var(--foco);font-weight:700}form.linha{display:flex;gap:8px;flex-wrap:wrap;align-items:end}label{display:block;font-size:.85rem;color:var(--suave)}
+.erro{color:var(--ruim);font-weight:600}.ok{color:var(--ok);font-weight:600}.abas{display:flex;gap:8px;margin:0 0 4px;flex-wrap:wrap}.passo{display:flex;gap:10px;align-items:center;padding:6px 0}.num{display:inline-flex;width:28px;height:28px;border-radius:50%;align-items:center;justify-content:center;font-weight:700;border:2px solid var(--linha);flex:none}.num.feito{background:var(--ok-f);border-color:var(--ok);color:var(--ok)}.num.agora{border-color:var(--foco);color:var(--foco)}.cenarios{display:grid;gap:8px}.mini{font-size:.9rem}.svgbox{overflow-x:auto;border:1px solid var(--linha);border-radius:8px;padding:6px}.svgbox svg{display:block}.svgbox text{fill:var(--texto);font:11px system-ui,sans-serif}details{margin:8px 0}summary{cursor:pointer;min-height:44px;display:flex;align-items:center}textarea,.largo{width:100%;font:inherit;color:inherit;background:var(--cartao);border:1px solid var(--linha);border-radius:8px;padding:10px}.valor{font-size:1.5rem;font-weight:700}ul.ev{margin:6px 0;padding-left:18px}.alta{background:var(--ruim-f);color:var(--ruim)}.media{background:var(--at-f);color:var(--at)}.baixa{background:var(--linha);color:var(--suave)}.abas button[aria-current=page]{border-color:var(--foco);font-weight:700}form.linha{display:flex;gap:8px;flex-wrap:wrap;align-items:end}label{display:block;font-size:.85rem;color:var(--suave)}label.inline{display:inline-flex;align-items:center;gap:6px;color:var(--texto);font-size:.9rem}
+.prog{height:10px;border-radius:999px;background:var(--linha);overflow:hidden;margin:8px 0}.prog-f{height:100%;background:var(--foco);border-radius:999px;transition:width .3s}.prog-f.cheia{background:var(--ok)}ul.compromissos{list-style:none;margin:8px 0 0;padding:0}.compromisso{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-top:1px solid var(--linha)}.compromisso>span:nth-child(2){flex:1}.marca{display:inline-flex;width:26px;height:26px;border-radius:50%;align-items:center;justify-content:center;border:2px solid var(--linha);flex:none;font-weight:700;color:var(--suave)}.marca.feita{background:var(--ok-f);border-color:var(--ok);color:var(--ok)}button.mini{min-height:36px;padding:6px 10px;font-size:.88rem}.acao{padding:10px 0;border-top:1px solid var(--linha)}.acao-t{margin:0 0 4px}.acao.justificada{opacity:.75}.just{color:var(--at)}.prod{padding:8px 0;border-top:1px solid var(--linha)}.prod:first-of-type{border-top:0}.critica{background:var(--ruim-f);color:var(--ruim)}.alta{background:var(--at-f);color:var(--at)}.normal{background:var(--linha);color:var(--texto)}.estrategica{background:#e8eefc;color:#2457d6}@media (prefers-color-scheme:dark){.estrategica{background:#1b2740;color:#8aa9ff}}.rituais{margin:4px 0 8px}.rituais button{flex:1}.pessoa{flex-wrap:wrap}.pessoa>span:first-child{flex:1 1 200px}
 </style>
 </head>
 <body>
@@ -41,7 +44,7 @@ var app=document.getElementById('app');
 var NOMES={receita:'Receita (R$)',vendas:'Vendas',oportunidades:'Oportunidades',reuniao_realizada:'Reuniões feitas',agendamento:'Agendamentos',contato:'Contatos',tentativa:'Tentativas',proposta_enviada:'Propostas enviadas'};
 var ROTULO={no_ritmo:'No ritmo',atencao:'Atenção',atras:'Atrás'};
 var PIOR={atras:3,atencao:2,no_ritmo:1};
-var estado={ops:null,slug:null,data:null,pessoa:null,aba:'ritmo',passoQ:null,viuDiag:false,grafoSt:null,stFonte:'observado',stEntrada:null,stTicket:null};
+var estado={ops:null,slug:null,data:null,pessoa:null,aba:'dia',ritual:null,pessoaDia:null,passoQ:null,viuDiag:false,grafoSt:null,stFonte:'observado',stEntrada:null,stTicket:null};
 var FUNCOES={sdr:'SDR (prospecta e agenda)',closer:'Closer (fecha)',ambos:'SDR e closer',cs:'Sucesso do cliente',gestor:'Gestor',outro:'Outro'};
 function guardar(k,v){try{if(v==null)sessionStorage.removeItem(k);else sessionStorage.setItem(k,v)}catch(e){}}
 function ler(k){try{return sessionStorage.getItem(k)}catch(e){return null}}
@@ -93,14 +96,14 @@ function cabecalho(titulo,sub){
 function controles(){
   var sel=el('select',{'aria-label':'Operação',onchange:function(){estado.slug=sel.value;estado.pessoa=null;guardar('slug',estado.slug);desenhar()}},
     estado.ops.map(function(o){var op=el('option',{value:o.slug,texto:o.nome});if(o.slug===estado.slug)op.selected=true;return op}));
-  var dt=el('input',{type:'date','aria-label':'Dia',value:estado.data||'',onchange:function(){estado.data=dt.value||null;estado.pessoa=null;desenhar()}});
-  var hoje=el('button',{type:'button',texto:'Hoje',onclick:function(){estado.data=null;estado.pessoa=null;desenhar()}});
+  var dt=el('input',{type:'date','aria-label':'Dia',value:estado.data||'',onchange:function(){estado.data=dt.value||null;estado.pessoa=null;estado.ritual=null;desenhar()}});
+  var hoje=el('button',{type:'button',texto:'Hoje',onclick:function(){estado.data=null;estado.pessoa=null;estado.ritual=null;desenhar()}});
   var sair=el('button',{type:'button',texto:'Sair',onclick:function(){guardar('token',null);guardar('refresh',null);iniciar()}});
   return el('div',{class:'barra'},[estado.ops.length>1?sel:null,dt,hoje,sair]);
 }
 function abas(){
   function b(id,t){var x=el('button',{type:'button',texto:t,onclick:function(){estado.aba=id;estado.pessoa=null;desenhar()}});if(estado.aba===id)x.setAttribute('aria-current','page');return x}
-  return el('div',{class:'abas'},[b('ritmo','Ritmo'),b('equipe','Equipe e metas'),b('quarter','Quarter'),b('fechamento','Fechamento'),b('achados','Achados'),b('dados','Dados'),b('studio','Studio'),b('operacoes','Operações')]);
+  return el('div',{class:'abas'},[b('dia','Dia'),b('ritmo','Ritmo'),b('equipe','Equipe e metas'),b('quarter','Quarter'),b('fechamento','Fechamento'),b('achados','Achados'),b('dados','Dados'),b('studio','Studio'),b('operacoes','Operações')]);
 }
 function agrupar(linhas){
   var por={};
@@ -109,6 +112,7 @@ function agrupar(linhas){
 }
 async function desenhar(){
   limpar();
+  if(estado.aba==='dia')return telaDia();
   if(estado.aba==='equipe')return telaEquipe();
   if(estado.aba==='quarter')return telaQuarter();
   if(estado.aba==='fechamento')return telaFechamento();
@@ -605,6 +609,7 @@ async function telaStudio(msg,ok){
     el('button',{class:'primario',type:'submit',texto:'Criar campanha'})]));
   app.appendChild(el('div',{class:'cartao'},blocos));
 }
+${TELA_DIA}
 async function iniciar(){
   if(!ler('token'))return telaEntrada();
   limpar();app.appendChild(el('p',{class:'suave',texto:'Carregando…'}));
