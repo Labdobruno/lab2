@@ -10,7 +10,7 @@ Aprovado pelo Bruno até a fase 8 (segunda operação).
 | **4. Telas novas** (1ª tela ✅) | Front-end novo: uma pergunta por tela e detalhe só quando pedido. A primeira tela é a produtividade do time | Conceito das trilhas (Passado, Mês, Futuro) |
 | **5. Quarter e fechamento de ciclo** ✅ | Planejar o quarter em 6 fases, cenários, programa de ciclos, retrato imutável do ciclo e aprendizados | `lq*`, `fr*`/`fi*`/`fd*`/`fa*`, `lpoPrograma` |
 | **6. Motor de hipóteses e qualidade de dados** ✅ | Biblioteca declarativa por pack, com impacto em R$ escrito como fórmula e não como código. Também:<br>• achados com orçamento de atenção;<br>• canvas de decisão;<br>• experimentos e memória comercial;<br>• checagens de qualidade de dados | `labMotorAvaliar`, `LAB_BIB_CORE`, `labCondicao`, `lbv*` |
-| **7. Studio** | Funis em grafo e campanhas de go-to-market, com o motor do construtor de hipóteses unificado ao do Studio | `gs*` (motor), `lbc*` |
+| **7. Studio** ✅ | Funis em grafo e campanhas de go-to-market, com o motor do construtor de hipóteses unificado ao do Studio | `gs*` (motor), `lbc*` |
 | **8. Segunda operação** ✅ | Pack `licitacao-b2b` e conector da fonte que ela usar | — |
 
 ## Pendências

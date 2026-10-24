@@ -17,6 +17,7 @@
      POST /admin/conectores/:id/processar       reprocessa pendentes e erros
      GET  /admin/conectores/:id/saude           execuções, entradas por status, erros e o que revisar
      GET  /admin/metricas/dicionario            definição de cada número
+     GET  /admin/operacoes/:slug/canais         canais ativos da operação
      GET  /admin/operacoes/:slug/pessoas        equipe
      POST /admin/operacoes/:slug/pessoas        { nome, funcao }
      POST /admin/operacoes/:slug/pessoas/:id    { nome?, funcao?, ativa? }
@@ -32,6 +33,11 @@
      GET|POST /admin/operacoes/:slug/decisoes   canvas de decisão { pergunta, opcoes[], escolha, porque?, criterioSucesso?, revisarEm?, hipoteseId?, contexto? }
      GET|POST /admin/operacoes/:slug/experimentos            { titulo, metrica, alvo, fimPrevisto?, hipoteseId?, decisaoId? }
      POST /admin/operacoes/:slug/experimentos/:id/concluir   { descartar?, conclusao? }
+     GET  /admin/operacoes/:slug/studio/observado?data=   funil em grafo montado do histórico
+     GET|POST /admin/operacoes/:slug/studio/funis         funis desenhados (cada gravação é uma versão nova) { nome, grafo }
+     POST /admin/operacoes/:slug/studio/simular           { funil?: nome|"observado", grafo?, entrada?, ticketMedio?, alteracoes? }  não grava
+     GET|POST /admin/operacoes/:slug/studio/campanhas     campanhas de go-to-market { nome, canal, fim, orcamento, inicio?, funil?, cpl?, ticketMedio?, margem? }
+     POST /admin/operacoes/:slug/studio/campanhas/:id/iniciar | encerrar   { investimentoReal? }
      GET  /admin/operacoes/:slug/quarter?data=  plano do quarter: passos, cenários e programa de ciclos
      POST /admin/operacoes/:slug/quarter        inicia o quarter (passo 1)        ?data=
      GET  /admin/operacoes/:slug/quarter/diagnostico                              passo 1: o quarter anterior
@@ -60,6 +66,9 @@ import {
 import {
   avaliarHipoteses, checarQualidade, concluirExperimento, decisoes, ErroDeMemoria, experimentos, iniciarExperimento, montarContexto, registrarDecisao,
 } from '@lab/hipoteses';
+import {
+  campanhas, criarCampanha, encerrarCampanha, ErroDeStudio, funisSalvos, grafoObservado, grafoSalvo, iniciarCampanha, salvarFunil, simularFunil, validarGrafo,
+} from '@lab/studio';
 import { garantirMigracoes } from './migracoes.js';
 import { MIGRACOES } from './migracoes.gen.js';
 import type { Sql } from 'postgres';
@@ -121,6 +130,43 @@ export function criarApp(opts: { sql: Sql; env: Ambiente; fetch?: typeof fetch; 
         } catch (e) {
           const msg = (e as Error).message;
           return erro(/duplicate key|unique/i.test(msg) ? `já existe uma operação "${b.slug}"` : msg, /unique/i.test(msg) ? 409 : 400);
+        }
+      }
+      if (id && acao === 'studio') {
+        const op = await operacaoPlanejamento(sql, id);
+        if (!op) return erro('operação não encontrada', 404);
+        const hoje = hojeNoFuso(op.fuso, (opts.agora ?? (() => new Date()))());
+        const data = url.searchParams.get('data') ?? hoje;
+        if (!dataValida(data)) return erro('data deve ser AAAA-MM-DD');
+        const contexto = async () => {
+          const [o] = await sql<{ pack: PackResolvido | null; pack_id: string; ajustes: Record<string, unknown> }[]>`select pack, pack_id, ajustes from lab.operacao where id = ${op.id}`;
+          const amostra = (o?.pack ?? packDaOperacao(o!.pack_id, o!.ajustes, CATALOGO).pack)?.parametros?.amostraMinima ?? 10;
+          return montarContexto(sql, op, data, { amostraMinima: amostra });
+        };
+        try {
+          if (sub === 'observado' && m === 'GET') {
+            const obs = await grafoObservado(sql, op, data);
+            return json({ ...obs, simulacao: simularFunil(obs.grafo, await contexto()) });
+          }
+          if (sub === 'funis' && m === 'GET') return json(await funisSalvos(sql, op));
+          if (sub === 'funis' && m === 'POST') { const b = await corpoJSON(req); return json(await salvarFunil(sql, op, b.nome, b.grafo), 201); }
+          if (sub === 'simular' && m === 'POST') {
+            const b = await corpoJSON(req);
+            let grafo;
+            if (b.grafo) { const v = validarGrafo(b.grafo); if (!v.ok) return erro(`grafo inválido: ${v.erros.join('; ')}`); grafo = v.grafo!; }
+            else if (typeof b.funil === 'string' && b.funil !== 'observado') grafo = await grafoSalvo(sql, op, b.funil);
+            else grafo = (await grafoObservado(sql, op, data)).grafo;
+            return json({ grafo, ...simularFunil(grafo, await contexto(), { entrada: b.entrada == null ? null : Number(b.entrada), ticketMedio: b.ticketMedio == null ? null : Number(b.ticketMedio), alteracoes: (b.alteracoes ?? {}) as Record<string, number | string> }) });
+          }
+          if (sub === 'campanhas') {
+            if (!partes[4] && m === 'GET') return json(await campanhas(sql, op));
+            if (!partes[4] && m === 'POST') return json(await criarCampanha(sql, op, await contexto(), hoje, await corpoJSON(req)), 201);
+            if (partes[4] && partes[5] === 'iniciar' && m === 'POST') return json(await iniciarCampanha(sql, op, partes[4]));
+            if (partes[4] && partes[5] === 'encerrar' && m === 'POST') return json(await encerrarCampanha(sql, op, partes[4], (await corpoJSON(req).catch(() => ({} as Record<string, unknown>))).investimentoReal));
+          }
+        } catch (e) {
+          if (e instanceof ErroDeStudio) return erro(e.message, e.status);
+          throw e;
         }
       }
       if (id && ['hipoteses', 'achados', 'qualidade', 'decisoes', 'experimentos'].includes(acao ?? '')) {
@@ -193,6 +239,11 @@ export function criarApp(opts: { sql: Sql; env: Ambiente; fetch?: typeof fetch; 
           if (e instanceof ErroDeRegra) return erro(e.message, e.status);
           throw e;
         }
+      }
+      if (id && acao === 'canais' && m === 'GET') {
+        const [op] = await sql<{ id: string }[]>`select id from lab.operacao where slug = ${id}`;
+        if (!op) return erro('operação não encontrada', 404);
+        return json(await sql`select chave, nome, tipo from lab.canal where operacao_id = ${op.id} and ativo order by nome`);
       }
       if (id && acao === 'pessoas') {
         const [op] = await sql<{ id: string }[]>`select id from lab.operacao where slug = ${id}`;

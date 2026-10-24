@@ -46,3 +46,12 @@ Cada decisão tem o porquê, para não ser refeita sem motivo.
 - **Sem números de negócio inventados:** o pack não fixa margem, desconto máximo nem impostos.
 - **Tela de Operações:** criar operação (escolhendo o pack) e importar CSV pelo navegador, com os arquivos aplicados na ordem certa.
 - **Correção de fuso:** datas sem horário e horários sem fuso vindos de planilha passam a valer no fuso da operação (`packages/conectores/src/fuso.ts`). O teste da licitação revelou que o negócio do dia 1º caía no mês anterior.
+
+## Fase 7: Studio (funis em grafo e campanhas)
+
+- **Funil em grafo:** nós (etapas, vendas, perdas) e arestas com taxa de passagem; sem ciclos. O **observado** sai das passagens reais do histórico (taxa = passagens ÷ saídas da etapa); voltas a etapas anteriores são ignoradas e contadas. Com todas as saídas resolvidas, o modelo reproduz as vendas reais (há teste).
+- **Um só motor:** a taxa de uma aresta, o CPL, o ticket e a margem de uma campanha podem ser número ou **fórmula**, na mesma linguagem e com as mesmas variáveis das hipóteses (`packages/nucleo/src/hipoteses`). Dado ausente é `null` e a simulação recusa em vez de assumir zero.
+- **Alavancas:** para cada passagem, +5 pontos de conversão, tirados primeiro do que está parado na etapa e depois das saídas para "perdido", de modo que as saídas continuam somando 100%. As que mais rendem em vendas aparecem primeiro.
+- **Funis desenhados** são versionados (cada gravação é uma versão nova; só acréscimo).
+- **Campanha:** orçamento ÷ CPL = leads → funil → vendas, receita, CAC, ROI e margem. O plano é uma fotografia (o banco impede mudar). O andamento só avança (planejada → rodando → encerrada). Ao encerrar, mede o realizado (leads do canal criados no período, vendas e receita deles) e escreve plano × realizado na memória comercial. O investimento realizado vem do que você informar ao encerrar; sem isso, dos lançamentos mensais do canal nos meses da campanha, o que pode incluir outras campanhas do mesmo canal.
+- **Tela:** o grafo é desenhado em SVG, sem biblioteca. Quando a tela é redesenhada, as buscas da versão anterior são descartadas, para duas atualizações seguidas não duplicarem conteúdo.

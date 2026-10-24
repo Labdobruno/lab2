@@ -30,7 +30,7 @@ button{cursor:pointer}button.primario{background:var(--foco);border-color:var(--
 .chip{display:inline-block;border-radius:999px;padding:2px 10px;font-size:.85rem;font-weight:600;white-space:nowrap}
 .no_ritmo{background:var(--ok-f);color:var(--ok)}.atencao{background:var(--at-f);color:var(--at)}.atras{background:var(--ruim-f);color:var(--ruim)}.sem{background:var(--linha);color:var(--suave)}
 table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:8px 4px;border-bottom:1px solid var(--linha);font-size:.95rem}
-.erro{color:var(--ruim);font-weight:600}.ok{color:var(--ok);font-weight:600}.abas{display:flex;gap:8px;margin:0 0 4px;flex-wrap:wrap}.passo{display:flex;gap:10px;align-items:center;padding:6px 0}.num{display:inline-flex;width:28px;height:28px;border-radius:50%;align-items:center;justify-content:center;font-weight:700;border:2px solid var(--linha);flex:none}.num.feito{background:var(--ok-f);border-color:var(--ok);color:var(--ok)}.num.agora{border-color:var(--foco);color:var(--foco)}.cenarios{display:grid;gap:8px}.mini{font-size:.9rem}details{margin:8px 0}summary{cursor:pointer;min-height:44px;display:flex;align-items:center}textarea,.largo{width:100%;font:inherit;color:inherit;background:var(--cartao);border:1px solid var(--linha);border-radius:8px;padding:10px}.valor{font-size:1.5rem;font-weight:700}ul.ev{margin:6px 0;padding-left:18px}.alta{background:var(--ruim-f);color:var(--ruim)}.media{background:var(--at-f);color:var(--at)}.baixa{background:var(--linha);color:var(--suave)}.abas button[aria-current=page]{border-color:var(--foco);font-weight:700}form.linha{display:flex;gap:8px;flex-wrap:wrap;align-items:end}label{display:block;font-size:.85rem;color:var(--suave)}
+.erro{color:var(--ruim);font-weight:600}.ok{color:var(--ok);font-weight:600}.abas{display:flex;gap:8px;margin:0 0 4px;flex-wrap:wrap}.passo{display:flex;gap:10px;align-items:center;padding:6px 0}.num{display:inline-flex;width:28px;height:28px;border-radius:50%;align-items:center;justify-content:center;font-weight:700;border:2px solid var(--linha);flex:none}.num.feito{background:var(--ok-f);border-color:var(--ok);color:var(--ok)}.num.agora{border-color:var(--foco);color:var(--foco)}.cenarios{display:grid;gap:8px}.mini{font-size:.9rem}.svgbox{overflow-x:auto;border:1px solid var(--linha);border-radius:8px;padding:6px}.svgbox svg{display:block}.svgbox text{fill:var(--texto);font:11px system-ui,sans-serif}details{margin:8px 0}summary{cursor:pointer;min-height:44px;display:flex;align-items:center}textarea,.largo{width:100%;font:inherit;color:inherit;background:var(--cartao);border:1px solid var(--linha);border-radius:8px;padding:10px}.valor{font-size:1.5rem;font-weight:700}ul.ev{margin:6px 0;padding-left:18px}.alta{background:var(--ruim-f);color:var(--ruim)}.media{background:var(--at-f);color:var(--at)}.baixa{background:var(--linha);color:var(--suave)}.abas button[aria-current=page]{border-color:var(--foco);font-weight:700}form.linha{display:flex;gap:8px;flex-wrap:wrap;align-items:end}label{display:block;font-size:.85rem;color:var(--suave)}
 </style>
 </head>
 <body>
@@ -41,12 +41,12 @@ var app=document.getElementById('app');
 var NOMES={receita:'Receita (R$)',vendas:'Vendas',oportunidades:'Oportunidades',reuniao_realizada:'Reuniões feitas',agendamento:'Agendamentos',contato:'Contatos',tentativa:'Tentativas',proposta_enviada:'Propostas enviadas'};
 var ROTULO={no_ritmo:'No ritmo',atencao:'Atenção',atras:'Atrás'};
 var PIOR={atras:3,atencao:2,no_ritmo:1};
-var estado={ops:null,slug:null,data:null,pessoa:null,aba:'ritmo',passoQ:null,viuDiag:false};
+var estado={ops:null,slug:null,data:null,pessoa:null,aba:'ritmo',passoQ:null,viuDiag:false,grafoSt:null,stFonte:'observado',stEntrada:null,stTicket:null};
 var FUNCOES={sdr:'SDR (prospecta e agenda)',closer:'Closer (fecha)',ambos:'SDR e closer',cs:'Sucesso do cliente',gestor:'Gestor',outro:'Outro'};
 function guardar(k,v){try{if(v==null)sessionStorage.removeItem(k);else sessionStorage.setItem(k,v)}catch(e){}}
 function ler(k){try{return sessionStorage.getItem(k)}catch(e){return null}}
 function el(tag,attrs,filhos){var n=document.createElement(tag);for(var k in (attrs||{})){if(k==='class')n.className=attrs[k];else if(k==='texto')n.textContent=attrs[k];else if(k.slice(0,2)==='on')n.addEventListener(k.slice(2),attrs[k]);else n.setAttribute(k,attrs[k])}(filhos||[]).forEach(function(f){if(f)n.appendChild(typeof f==='string'?document.createTextNode(f):f)});return n}
-function limpar(){while(app.firstChild)app.removeChild(app.firstChild)}
+function limpar(){estado.gen=(estado.gen||0)+1;try{while(app.firstChild)app.removeChild(app.firstChild)}catch(e){app.textContent=''}}
 function numero(n){return new Intl.NumberFormat('pt-BR',{maximumFractionDigits:1}).format(n)}
 function data(d){var p=d.split('-');return p[2]+'/'+p[1]+'/'+p[0]}
 function chip(s){return el('span',{class:'chip '+(s||'sem'),texto:s?ROTULO[s]:'Sem meta'})}
@@ -58,7 +58,10 @@ async function renovarSessao(){
 async function api(caminho,corpo,tentou){
   var o={headers:{authorization:'Bearer '+(ler('token')||'')}};
   if(corpo){o.method='POST';o.headers['content-type']='application/json';o.body=JSON.stringify(corpo)}
+  var geracao=estado.gen;
   var r=await fetch(caminho,o);
+  /* a tela foi redesenhada enquanto esta busca andava: a resposta é de uma versão antiga e é descartada (a função que a esperava não continua) */
+  if(geracao!==estado.gen)return new Promise(function(){});
   if(r.status===401){if(!tentou&&await renovarSessao())return api(caminho,corpo,true);guardar('token',null);guardar('refresh',null);throw new Error('401')}
   if(!r.ok){var c={};try{c=await r.json()}catch(e){}throw new Error(c.erro||('erro '+r.status))}
   return r.json();
@@ -97,7 +100,7 @@ function controles(){
 }
 function abas(){
   function b(id,t){var x=el('button',{type:'button',texto:t,onclick:function(){estado.aba=id;estado.pessoa=null;desenhar()}});if(estado.aba===id)x.setAttribute('aria-current','page');return x}
-  return el('div',{class:'abas'},[b('ritmo','Ritmo'),b('equipe','Equipe e metas'),b('quarter','Quarter'),b('fechamento','Fechamento'),b('achados','Achados'),b('dados','Dados'),b('operacoes','Operações')]);
+  return el('div',{class:'abas'},[b('ritmo','Ritmo'),b('equipe','Equipe e metas'),b('quarter','Quarter'),b('fechamento','Fechamento'),b('achados','Achados'),b('dados','Dados'),b('studio','Studio'),b('operacoes','Operações')]);
 }
 function agrupar(linhas){
   var por={};
@@ -112,6 +115,7 @@ async function desenhar(){
   if(estado.aba==='achados')return telaAchados();
   if(estado.aba==='dados')return telaDados();
   if(estado.aba==='operacoes')return telaOperacoes();
+  if(estado.aba==='studio')return telaStudio();
   app.appendChild(el('p',{class:'suave',texto:'Carregando…'}));
   var q=estado.data?('?data='+encodeURIComponent(estado.data)):'';
   var r;
@@ -472,6 +476,134 @@ async function telaOperacoes(msg,ok,resultados){
       return el('p',{},[el('span',{class:'chip '+(x.ok&&!(x.j.erros>0)?'no_ritmo':'atras'),texto:x.ok&&!(x.j.erros>0)?'OK':'Atenção'}),' '+x.nome+' · '+(x.j.falha?x.j.falha:(x.j.aplicados||0)+' linha(s) aplicada(s)'+(x.j.erros?', '+x.j.erros+' com erro':'')+(x.j.erro&&!x.j.falha?' · '+x.j.erro:''))])
     })).concat(resultados.erros.map(function(e){return el('p',{class:'erro mini',texto:e.tipo+': '+e.erro})}))));
   }
+}
+var SVGNS='http://www.w3.org/2000/svg';
+function sv(tag,attrs,filhos){var n=document.createElementNS(SVGNS,tag);for(var k in (attrs||{}))n.setAttribute(k,attrs[k]);(filhos||[]).forEach(function(f){n.appendChild(f)});return n}
+function desenharGrafo(g,sim){
+  var cam=sim.camadas||{},cols={},maxC=0;
+  g.nos.forEach(function(n){var c=cam[n.id]||0;(cols[c]=cols[c]||[]).push(n);if(c>maxC)maxC=c});
+  var W=110,H=46,pos={};
+  Object.keys(cols).forEach(function(c){cols[c].forEach(function(n,i){pos[n.id]={x:Number(c)*(W+34)+6,y:i*H+8}})});
+  var altura=Math.max.apply(null,Object.keys(cols).map(function(c){return cols[c].length}))*H+16;
+  var vol={};if(sim.simulacao)sim.simulacao.arestas.forEach(function(a){vol[a.de+'>'+a.para]=a.volume});
+  var vmax=Math.max.apply(null,[1].concat(Object.keys(vol).map(function(k){return vol[k]})));
+  var nos={};if(sim.simulacao)sim.simulacao.nos.forEach(function(n){nos[n.id]=n});
+  var filhos=[];
+  g.arestas.forEach(function(a){
+    var p=pos[a.de],q=pos[a.para];if(!p||!q)return;
+    var x1=p.x+W-12,y1=p.y+16,x2=q.x,y2=q.y+16,mx=(x1+x2)/2;
+    var v=vol[a.de+'>'+a.para]||0,esp=1+7*Math.sqrt(v/vmax);
+    var perd=(g.nos.filter(function(n){return n.id===a.para})[0]||{}).tipo==='perdido';
+    filhos.push(sv('path',{d:'M'+x1+' '+y1+' C'+mx+' '+y1+' '+mx+' '+y2+' '+x2+' '+y2,fill:'none',stroke:perd?'#b3261e':'#2457d6','stroke-opacity':perd?'.28':'.45','stroke-width':String(esp)}));
+    var t=typeof a.taxa==='number'?Math.round(a.taxa*100)+'%':'ƒ';
+    filhos.push(sv('text',{x:String(mx),y:String((y1+y2)/2-3),'text-anchor':'middle'},[document.createTextNode(t)]));
+  });
+  g.nos.forEach(function(n){
+    var p=pos[n.id];if(!p)return;
+    var cor=n.tipo==='ganho'?'#0f7b3f':n.tipo==='perdido'?'#b3261e':'#5b6270';
+    var r=sv('rect',{x:String(p.x),y:String(p.y),width:String(W-12),height:'32',rx:'6',fill:'none',stroke:cor,'stroke-width':n.id===g.entrada?'3':'1.5'});
+    var tt=sv('title',{});tt.appendChild(document.createTextNode(n.nome));r.appendChild(tt);
+    filhos.push(r);
+    filhos.push(sv('text',{x:String(p.x+6),y:String(p.y+14)},[document.createTextNode(n.nome.length>15?n.nome.slice(0,14)+'…':n.nome)]));
+    var vv=nos[n.id]?numero(nos[n.id].volume):'';
+    filhos.push(sv('text',{x:String(p.x+6),y:String(p.y+27),style:'opacity:.7'},[document.createTextNode(vv)]));
+  });
+  var svg=sv('svg',{width:String((maxC+1)*(W+34)),height:String(altura),role:'img','aria-label':'Funil em grafo'},filhos);
+  return el('div',{class:'svgbox'},[svg]);
+}
+function taxaTexto(t){return typeof t==='number'?String(Math.round(t*1000)/10):t}
+function lerTaxa(v){v=v.trim();if(/^[0-9]+([.,][0-9]+)?%?$/.test(v)){var n=Number(v.replace('%','').replace(',','.'))/100;return n}return v}
+async function telaStudio(msg,ok){
+  limpar();
+  var base='/admin/operacoes/'+encodeURIComponent(estado.slug),fun,cam,can,sim,obs=null;
+  try{
+    fun=await api(base+'/studio/funis');cam=await api(base+'/studio/campanhas');can=await api(base+'/canais');
+    if(!estado.grafoSt){
+      if(estado.stFonte==='observado'){obs=await api(base+'/studio/observado'+qs());estado.grafoSt=obs.grafo;estado.stObs={passagens:obs.passagens,ignoradas:obs.ignoradas}}
+      else{var f=fun.filter(function(x){return x.nome===estado.stFonte})[0];if(f)estado.grafoSt=f.grafo;else{estado.stFonte='observado';return telaStudio()}estado.stObs=null}
+    }
+    sim=await api(base+'/studio/simular'+qs(),{grafo:estado.grafoSt,entrada:estado.stEntrada,ticketMedio:estado.stTicket});
+  }catch(e){if(e.message==='401')return telaEntrada('Acesso recusado. Entre de novo.');app.appendChild(el('p',{class:'erro',texto:'Não consegui carregar: '+e.message}));if(estado.grafoSt){estado.grafoSt=null}return}
+  var g=estado.grafoSt;
+  function refazer(m,o){telaStudio(m,o)}
+  app.appendChild(abas());
+  app.appendChild(el('h1',{texto:'Studio'}));
+  app.appendChild(el('p',{class:'suave',texto:'Desenhe o funil, mude as passagens e veja o que rende mais. As taxas aceitam número (35) ou fórmula com as mesmas variáveis das hipóteses.'}));
+  app.appendChild(controles());
+  if(msg)app.appendChild(el('p',{class:ok?'ok':'erro',texto:msg}));
+  /* origem */
+  var fonte=el('select',{'aria-label':'Funil',onchange:function(){estado.stFonte=fonte.value;estado.grafoSt=null;telaStudio()}},[el('option',{value:'observado',texto:'Observado no histórico'})].concat(fun.map(function(f){return el('option',{value:f.nome,texto:f.nome+' (v'+f.versao+')'})})));
+  fonte.value=estado.stFonte;
+  var cartao=[el('h2',{texto:'Funil em grafo'}),el('p',{},[fonte])];
+  if(estado.stObs)cartao.push(el('p',{class:'suave mini',texto:'Montado de '+estado.stObs.passagens+' passagens reais'+(estado.stObs.ignoradas?'; '+estado.stObs.ignoradas+' tipo(s) de volta a etapa anterior foram ignorados.':'.')}));
+  cartao.push(desenharGrafo(g,sim));
+  var leads=el('input',{type:'number',min:'0',step:'any',inputmode:'decimal','aria-label':'Leads que entram',placeholder:sim.entrada==null?'':String(Math.round(sim.entrada)),value:estado.stEntrada==null?'':String(estado.stEntrada)});
+  var tick=el('input',{type:'number',min:'0',step:'any',inputmode:'decimal','aria-label':'Ticket médio',placeholder:sim.ticketMedio==null?'':String(Math.round(sim.ticketMedio)),value:estado.stTicket==null?'':String(estado.stTicket)});
+  cartao.push(el('div',{class:'barra'},[el('label',{texto:'Leads que entram'}),leads,el('label',{texto:'Ticket (R$)'}),tick,el('button',{type:'button',texto:'Simular',onclick:function(){estado.stEntrada=leads.value===''?null:Number(leads.value);estado.stTicket=tick.value===''?null:Number(tick.value);telaStudio()}})]));
+  if(!sim.ok){sim.avisos.forEach(function(a){cartao.push(el('p',{class:'erro mini',texto:a}))})}
+  else{
+    cartao.push(el('div',{class:'valor',texto:numero(sim.simulacao.vendas)+' vendas'}));
+    cartao.push(el('p',{class:'suave',texto:sim.simulacao.receita==null?'Sem ticket para calcular a receita.':reais(sim.simulacao.receita)+' de receita com '+numero(sim.entrada)+' leads'}));
+    if(sim.alavancas.length){
+      cartao.push(el('h3',{texto:'Onde mexer rende mais (+5 pontos)'}));
+      sim.alavancas.forEach(function(a){var nm={};g.nos.forEach(function(n){nm[n.id]=n.nome});cartao.push(el('p',{class:'mini',texto:nm[a.de]+' → '+nm[a.para]+': de '+Math.round(a.taxa*100)+'% para '+Math.round(a.nova*100)+'% rende +'+numero(a.ganhoVendas)+' vendas'+(a.ganhoReceita==null?'':' (+'+reais(a.ganhoReceita)+')')}))});
+    }
+  }
+  sim.avisos.forEach(function(a){if(sim.ok)cartao.push(el('p',{class:'suave mini',texto:a}))});
+  app.appendChild(el('div',{class:'cartao'},cartao));
+  /* passagens */
+  var nm={};g.nos.forEach(function(n){nm[n.id]=n.nome});
+  var vol={};if(sim.simulacao)sim.simulacao.arestas.forEach(function(a){vol[a.de+'>'+a.para]=a.volume});
+  var linhas=g.arestas.map(function(a,i){
+    var inp=el('input',{type:'text',value:taxaTexto(a.taxa),'aria-label':'Taxa de '+nm[a.de]+' para '+nm[a.para],style:'width:7em',onchange:function(){g.arestas[i].taxa=lerTaxa(inp.value);telaStudio()}});
+    return el('tr',{},[el('td',{texto:nm[a.de]+' → '+nm[a.para]}),el('td',{},[inp,typeof a.taxa==='number'?' %':'']),el('td',{texto:vol[a.de+'>'+a.para]==null?'—':numero(vol[a.de+'>'+a.para])}),el('td',{},[el('button',{type:'button',class:'mini',texto:'Tirar',onclick:function(){g.arestas.splice(i,1);telaStudio()}})])]);
+  });
+  var tab=el('table',{},[el('thead',{},[el('tr',{},['Passagem','Taxa','Volume',''].map(function(t){return el('th',{texto:t})}))]),el('tbody',{},linhas)]);
+  var nn=el('input',{type:'text',maxlength:'60','aria-label':'Nome da etapa'});
+  var nt=el('select',{'aria-label':'Tipo da etapa'},[el('option',{value:'etapa',texto:'Etapa'}),el('option',{value:'ganho',texto:'Venda (fim bom)'}),el('option',{value:'perdido',texto:'Perdido (fim ruim)'})]);
+  var de=el('select',{'aria-label':'De'},g.nos.filter(function(n){return n.tipo==='etapa'}).map(function(n){return el('option',{value:n.id,texto:n.nome})}));
+  var pa=el('select',{'aria-label':'Para'},g.nos.map(function(n){return el('option',{value:n.id,texto:n.nome})}));
+  var tx=el('input',{type:'text',style:'width:7em','aria-label':'Taxa em % ou fórmula'});
+  app.appendChild(el('div',{class:'cartao'},[el('h2',{texto:'Passagens'}),tab,
+    el('h3',{texto:'Adicionar etapa'}),
+    el('form',{class:'linha',onsubmit:function(e){e.preventDefault();var nome=nn.value.trim();if(!nome)return;var id=slugDe(nome)||'etapa',k=id,i=2;while(g.nos.some(function(n){return n.id===k}))k=id+'-'+(i++);g.nos.push({id:k,nome:nome,tipo:nt.value});telaStudio()}},[el('div',{},[el('label',{texto:'Nome'}),nn]),el('div',{},[el('label',{texto:'Tipo'}),nt]),el('button',{type:'submit',texto:'Adicionar'})]),
+    el('h3',{texto:'Adicionar passagem'}),
+    el('form',{class:'linha',onsubmit:function(e){e.preventDefault();if(tx.value.trim()==='')return;g.arestas.push({de:de.value,para:pa.value,taxa:lerTaxa(tx.value)});telaStudio()}},[el('div',{},[el('label',{texto:'De'}),de]),el('div',{},[el('label',{texto:'Para'}),pa]),el('div',{},[el('label',{texto:'Taxa (%) ou fórmula'}),tx]),el('button',{type:'submit',texto:'Adicionar'})])]));
+  var nomeSalvar=el('input',{type:'text',maxlength:'80','aria-label':'Nome do funil',value:estado.stFonte==='observado'?'':estado.stFonte});
+  app.appendChild(el('div',{class:'cartao'},[el('h2',{texto:'Guardar este funil'}),el('p',{class:'suave mini',texto:'Cada vez que guarda, vira uma versão nova; as antigas ficam.'}),
+    el('form',{class:'linha',onsubmit:async function(e){e.preventDefault();try{var r=await api(base+'/studio/funis',{nome:nomeSalvar.value,grafo:g});estado.stFonte=nomeSalvar.value.trim();estado.grafoSt=null;telaStudio('Funil guardado (versão '+r.versao+').',true)}catch(x){telaStudio(x.message)}}},[el('div',{},[el('label',{texto:'Nome'}),nomeSalvar]),el('button',{class:'primario',type:'submit',texto:'Guardar'})])]));
+  /* campanhas */
+  var cn=el('input',{type:'text',maxlength:'120','aria-label':'Nome da campanha'});
+  var cc=el('select',{'aria-label':'Canal'},can.map(function(c){return el('option',{value:c.chave,texto:c.nome})}));
+  var cf=el('input',{type:'date','aria-label':'Termina em'});
+  var co=el('input',{type:'number',min:'0',step:'any',inputmode:'decimal','aria-label':'Orçamento'});
+  var cp=el('input',{type:'number',min:'0',step:'any',inputmode:'decimal','aria-label':'Custo por lead',placeholder:'usar o do canal'});
+  var cfun=el('select',{'aria-label':'Funil da campanha'},[el('option',{value:'',texto:'Observado no histórico'})].concat(fun.map(function(f){return el('option',{value:f.nome,texto:f.nome})})));
+  var blocos=[el('h2',{texto:'Campanhas de go-to-market'}),cam.length?null:el('p',{class:'suave',texto:'Nenhuma ainda. A projeção sai do funil acima, do custo por lead e do orçamento.'})];
+  cam.forEach(function(c){
+    var pl=c.plano;
+    var linhasC=[el('strong',{texto:c.nome}),' ',el('span',{class:'chip '+(c.status==='rodando'?'atencao':c.status==='encerrada'?'no_ritmo':'sem'),texto:c.status==='rodando'?'Rodando':c.status==='encerrada'?'Encerrada':'Planejada'}),
+      el('p',{class:'mini suave',texto:c.canal+' · '+data(c.inicio)+' a '+data(c.fim)+' · orçamento '+reais(c.orcamento)}),
+      el('p',{class:'mini',texto:'Plano: '+numero(pl.leads)+' leads · '+numero(pl.vendas)+' vendas · '+reais(pl.receita)+' · CAC '+reais(pl.cac)+' · ROI '+pct(pl.roi)})];
+    if(c.realizado)linhasC.push(el('p',{class:'mini',texto:'Realizado: '+c.realizado.leads+' leads · '+c.realizado.vendas+' vendas · '+reais(c.realizado.receita)+' · CAC '+reais(c.realizado.cac)+' · ROI '+pct(c.realizado.roi)}));
+    if(c.desvios){var dv=c.desvios.filter(function(d){return d.pct!=null&&(d.campo==='vendas'||d.campo==='receita')});dv.forEach(function(d){linhasC.push(el('p',{class:'mini '+(d.pct>=0?'ok':'erro'),texto:d.campo+': '+(d.pct>=0?'+':'')+Math.round(d.pct*100)+'% sobre o plano'}))})}
+    var bt=[];
+    if(c.status==='planejada')bt.push(el('button',{type:'button',class:'mini',texto:'Iniciar',onclick:async function(){try{await api(base+'/studio/campanhas/'+c.id+'/iniciar',{});telaStudio('Campanha iniciada.',true)}catch(x){telaStudio(x.message)}}}));
+    if(c.status!=='encerrada')bt.push(el('button',{type:'button',class:'mini',texto:'Encerrar e medir',onclick:async function(){
+      var v=prompt('Quanto foi investido de fato (R$)? Deixe vazio para usar os lançamentos do canal.');if(v===null)return;
+      try{var r=await api(base+'/studio/campanhas/'+c.id+'/encerrar',v.trim()===''?{}:{investimentoReal:Number(v.replace(',','.'))});telaStudio('Campanha encerrada e registrada na memória.',true)}catch(x){telaStudio(x.message)}}}));
+    linhasC.push(el('div',{class:'barra'},bt));
+    blocos.push(el('div',{class:'cartao'},linhasC));
+  });
+  blocos.push(el('h3',{texto:'Nova campanha'}));
+  blocos.push(el('p',{class:'suave mini',texto:'A projeção usa o funil escolhido, o custo por lead do canal no histórico (ou o que você informar) e o ticket médio.'}));
+  blocos.push(el('form',{onsubmit:async function(e){e.preventDefault();
+    var corpo={nome:cn.value,canal:cc.value,fim:cf.value,orcamento:Number(co.value)};if(cfun.value)corpo.funil=cfun.value;if(cp.value!=='')corpo.cpl=Number(cp.value);
+    try{await api(base+'/studio/campanhas',corpo);telaStudio('Campanha criada com a projeção.',true)}catch(x){telaStudio(x.message)}}},[
+    el('p',{},[el('label',{texto:'Nome'}),cn]),el('p',{},[el('label',{texto:'Canal'}),cc]),el('p',{},[el('label',{texto:'Termina em'}),cf]),
+    el('p',{},[el('label',{texto:'Orçamento (R$)'}),co]),el('p',{},[el('label',{texto:'Custo por lead (R$), opcional'}),cp]),el('p',{},[el('label',{texto:'Funil'}),cfun]),
+    el('button',{class:'primario',type:'submit',texto:'Criar campanha'})]));
+  app.appendChild(el('div',{class:'cartao'},blocos));
 }
 async function iniciar(){
   if(!ler('token'))return telaEntrada();

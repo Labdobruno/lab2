@@ -24,6 +24,9 @@
       ],
       "@lab/hipoteses": [
         "packages/hipoteses/src/index.ts"
+      ],
+      "@lab/studio": [
+        "packages/studio/src/index.ts"
       ]
     }
   },

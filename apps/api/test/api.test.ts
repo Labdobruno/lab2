@@ -102,6 +102,39 @@ describe.skipIf(semBanco)('API', () => {
     expect((await chamar('GET', '/admin/operacoes/nao-existe/achados')).status).toBe(404);
   });
 
+  it('studio: funil observado, simulação, funis versionados e campanhas', async () => {
+    await chamar('POST', '/admin/operacoes', { slug: 'stu', nome: 'Studio', packId: 'base' });
+    const obs = await (await chamar('GET', '/admin/operacoes/stu/studio/observado?data=2026-10-24')).json() as any;
+    expect(obs.grafo.entrada).toBe('lead');
+    expect(obs.grafo.nos.length).toBeGreaterThan(5);
+    expect(obs.simulacao.ok).toBe(false);                     // sem histórico: não inventa
+    const grafo = { entrada: 'a', nos: [{ id: 'a', nome: 'Lead', tipo: 'etapa' }, { id: 'g', nome: 'Venda', tipo: 'ganho' }, { id: 'p', nome: 'Perdido', tipo: 'perdido' }], arestas: [{ de: 'a', para: 'g', taxa: 0.2 }, { de: 'a', para: 'p', taxa: 0.8 }] };
+    const sim = await (await chamar('POST', '/admin/operacoes/stu/studio/simular', { grafo, entrada: 100, ticketMedio: 1000 })).json() as any;
+    expect(sim.ok).toBe(true);
+    expect(sim.simulacao).toMatchObject({ vendas: 20, receita: 20000 });
+    expect(sim.alavancas[0]).toMatchObject({ aresta: 'a>g', ganhoVendas: 5 });
+    const alt = await (await chamar('POST', '/admin/operacoes/stu/studio/simular', { grafo, entrada: 100, ticketMedio: 1000, alteracoes: { 'a>g': 0.5, 'a>p': 0.5 } })).json() as any;
+    expect(alt.simulacao.vendas).toBe(50);
+    expect((await chamar('POST', '/admin/operacoes/stu/studio/simular', { grafo: { ...grafo, arestas: [{ de: 'a', para: 'a', taxa: 1 }] } })).status).toBe(400);
+    expect((await chamar('POST', '/admin/operacoes/stu/studio/funis', { nome: 'Funil enxuto', grafo })).status).toBe(201);
+    expect(((await (await chamar('POST', '/admin/operacoes/stu/studio/funis', { nome: 'Funil enxuto', grafo })).json()) as any).versao).toBe(2);
+    expect(await (await chamar('GET', '/admin/operacoes/stu/studio/funis')).json()).toHaveLength(1);
+    expect((await chamar('POST', '/admin/operacoes/stu/studio/funis', { nome: 'Ruim', grafo: { ...grafo, entrada: 'zzz' } })).status).toBe(400);
+
+    const c = await chamar('POST', '/admin/operacoes/stu/studio/campanhas', { nome: 'Campanha A', canal: 'pago', fim: '2026-12-31', orcamento: 5000, funil: 'Funil enxuto', cpl: 50, ticketMedio: 1000 });
+    expect(c.status).toBe(201);
+    const { id, projecao } = await c.json() as any;
+    expect(projecao).toMatchObject({ leads: 100, vendas: 20, cac: 250, roi: 3 });
+    expect((await chamar('POST', '/admin/operacoes/stu/studio/campanhas', { nome: 'Sem CPL', canal: 'pago', fim: '2026-12-31', orcamento: 5000, funil: 'Funil enxuto' })).status).toBe(409);
+    expect((await chamar('POST', `/admin/operacoes/stu/studio/campanhas/${id}/iniciar`)).status).toBe(200);
+    const enc = await (await chamar('POST', `/admin/operacoes/stu/studio/campanhas/${id}/encerrar`, { investimentoReal: 4000 })).json() as any;
+    expect(enc).toMatchObject({ status: 'encerrada', realizado: { leads: 0, vendas: 0, investimento: 4000 } });
+    expect((await chamar('POST', `/admin/operacoes/stu/studio/campanhas/${id}/encerrar`, {})).status).toBe(409);
+    const lista = await (await chamar('GET', '/admin/operacoes/stu/studio/campanhas')).json() as any[];
+    expect(lista.map(x => x.status)).toEqual(['encerrada']);
+    expect((await chamar('GET', '/admin/operacoes/nao-existe/studio/observado')).status).toBe(404);
+  });
+
   it('lista packs válidos', async () => {
     const r = await (await chamar('GET', '/admin/packs')).json() as any[];
     expect(r.every(p => p.ok)).toBe(true);
