@@ -1,0 +1,15 @@
+id;cliente;canal;responsavel;etapa;criado_em;etapa_desde;valor_estimado;valor_fechado;fechado_em;motivo_perda;preco_referencia;preco_aprovado;condicao;custo_equipe
+L-001;Construtora Alfa (exemplo);Indicação;Diego Exemplo;ganho;01/07/2026;;;48.000,00;28/08/2026;;54.000,00;50.000,00;Honorário mensal;21.000,00
+L-002;Engenharia Beta (exemplo);Parceiros (contadores e advogados);Elisa Exemplo;ganho;10/07/2026;;;36.000,00;15/09/2026;;42.000,00;38.000,00;Honorário mensal;15.500,00
+L-003;Serviços Gama (exemplo);LinkedIn;Diego Exemplo;ganho;20/07/2026;;;60.000,00;05/10/2026;;72.000,00;64.000,00;Parte no êxito;30.000,00
+L-004;Tecnologia Delta (exemplo);Prospecção ativa;Diego Exemplo;perdido;05/07/2026;;40.000,00;;12/09/2026;Honorário ou êxito acima do esperado;;;;
+L-005;Limpeza Épsilon (exemplo);Prospecção ativa;Elisa Exemplo;perdido;12/07/2026;;25.000,00;;30/09/2026;Faz internamente;;;;
+L-006;Obras Zeta (exemplo);Mídia paga;Carla Exemplo;perdido;03/08/2026;;30.000,00;;18/09/2026;Sem licitações no momento;;;;
+L-007;Saúde Eta (exemplo);Eventos e palestras;Diego Exemplo;negociacao;10/08/2026;20/09/2026;55.000,00;;;;;;;
+L-008;Logística Teta (exemplo);Indicação;Elisa Exemplo;proposta;25/08/2026;28/09/2026;45.000,00;;;;;;;
+L-009;Papelaria Iota (exemplo);Mídia paga;Carla Exemplo;escopo;01/09/2026;10/10/2026;30.000,00;;;;;;;
+L-010;Segurança Capa (exemplo);Prospecção ativa;Carla Exemplo;diag_ok;10/09/2026;15/10/2026;35.000,00;;;;;;;
+L-011;Alimentos Lambda (exemplo);LinkedIn;Carla Exemplo;diag_ag;20/09/2026;18/10/2026;28.000,00;;;;;;;
+L-012;Móveis Mi (exemplo);Mídia paga;Carla Exemplo;qualificado;25/09/2026;12/10/2026;;;;;;;;
+L-013;Gráfica Ni (exemplo);Prospecção ativa;Carla Exemplo;contato;01/10/2026;05/10/2026;;;;;;;;
+L-014;Clínica Xi (exemplo);Mídia paga;Carla Exemplo;lead;15/10/2026;;;;;;;;;

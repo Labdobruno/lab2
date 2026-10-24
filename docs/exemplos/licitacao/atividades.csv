@@ -1,0 +1,11 @@
+id;data;atividade;pessoa;quantidade;negocio_id
+A-01;19/10/2026;tentativa;Carla Exemplo;45;
+A-02;19/10/2026;contato;Carla Exemplo;9;
+A-03;20/10/2026;tentativa;Carla Exemplo;50;
+A-04;20/10/2026;agendamento;Carla Exemplo;2;L-011
+A-05;21/10/2026;tentativa;Carla Exemplo;38;
+A-06;21/10/2026;reuniao;Diego Exemplo;2;L-010
+A-07;22/10/2026;proposta;Diego Exemplo;1;L-008
+A-08;22/10/2026;analise_edital;Elisa Exemplo;3;
+A-09;23/10/2026;follow_up;Diego Exemplo;4;L-007
+A-10;23/10/2026;tentativa;Elisa Exemplo;30;

@@ -1,0 +1,60 @@
+{
+  "$schema": "./pack.schema.json",
+  "id": "licitacao-b2b",
+  "nome": "Assessoria de licitação B2B",
+  "versao": "1.0.0",
+  "herda": "base",
+  "descricao": "Venda consultiva de assessoria para empresas participarem de licitações: ciclo longo, diagnóstico antes da proposta e honorário recorrente (mensal, com parte no êxito).",
+  "modelo": "b2b",
+  "textos": { "vendedor": "Consultor", "cliente": "Empresa" },
+  "funis": [
+    {
+      "chave": "aquisicao",
+      "etapas": [
+        { "chave": "lead", "nome": "Lead", "papel": "lead", "prazoDias": 2 },
+        { "chave": "contato", "nome": "Em contato", "papel": "contato", "prazoDias": 5 },
+        { "chave": "qualificado", "nome": "Qualificado (tem licitação no radar)", "papel": "qualificado", "prazoDias": 5 },
+        { "chave": "diag_ag", "nome": "Diagnóstico agendado", "papel": "agendada", "prazoDias": 7 },
+        { "chave": "diag_ok", "nome": "Diagnóstico realizado", "papel": "realizada", "prazoDias": 3 },
+        { "chave": "analise", "nome": "Análise de editais e habilitação", "papel": "intermediaria", "prazoDias": 7 },
+        { "chave": "escopo", "nome": "Escopo definido", "papel": "oportunidade", "prazoDias": 7 },
+        { "chave": "proposta", "nome": "Proposta enviada", "papel": "proposta", "prazoDias": 10 },
+        { "chave": "negociacao", "nome": "Negociação", "papel": "negociacao", "prazoDias": 21 },
+        { "chave": "ganho", "nome": "Contrato fechado", "papel": "ganho" },
+        { "chave": "perdido", "nome": "Perdido", "papel": "perdido" }
+      ]
+    }
+  ],
+  "atividades": [
+    { "chave": "reuniao", "nome": "Diagnóstico realizado", "unidade": "diagnósticos" },
+    { "chave": "agendamento", "nome": "Diagnóstico agendado", "unidade": "diagnósticos agendados" },
+    { "chave": "analise_edital", "nome": "Análise de edital", "papel": "outro", "unidade": "análises" }
+  ],
+  "canais": [
+    { "chave": "parceiro", "nome": "Parceiros (contadores e advogados)", "tipo": "parceiro" },
+    { "chave": "evento", "nome": "Eventos e palestras", "tipo": "evento" },
+    { "chave": "linkedin", "nome": "LinkedIn", "tipo": "organico", "pai": "organico" }
+  ],
+  "motivosPerda": [
+    { "chave": "sem_licitacao", "nome": "Sem licitações no momento", "grupo": "timing" },
+    { "chave": "faz_interno", "nome": "Faz internamente", "grupo": "interno" },
+    { "chave": "habilitacao_inviavel", "nome": "Empresa sem condição de habilitação", "grupo": "fit" },
+    { "chave": "honorario", "nome": "Honorário ou êxito acima do esperado", "grupo": "preco" }
+  ],
+  "tiposNegocio": ["novo", "renovacao", "expansao", "cross_sell"],
+  "precificacao": {
+    "linhas": [
+      { "chave": "custo_equipe", "nome": "Horas da equipe", "grupo": "custo_variavel", "base": "informado" }
+    ],
+    "condicoes": [
+      { "chave": "honorario_mensal", "nome": "Honorário mensal", "taxa": 0 },
+      { "chave": "parte_no_exito", "nome": "Parte no êxito", "taxa": 0 }
+    ]
+  },
+  "cs": { "recorrente": true, "periodicidadeMeses": 1, "janelaRenovacaoDias": 60, "janelaIndicacaoDias": 90 },
+  "parametros": { "maturacaoCoorteDias": 90, "amostraMinima": 10, "janelaHistoricaDias": 365, "orcamentoAtencao": 3 },
+  "hipoteses": [
+    {"chave": "recorrencia_encolhendo", "titulo": "A receita recorrente está encolhendo", "quando": "mrr_inicial > 0 && retencao_liquida < 1", "impacto": "mrr_inicial * (1 - retencao_liquida) * 12", "acao": "Ver quem cancelou ou reduziu, e abrir conversa de expansão com as contas saudáveis para repor.", "severidade": "alta"},
+    {"chave": "proposta_nao_avanca", "titulo": "Propostas que não viram negociação", "quando": "amostra_coorte >= amostra_minima && passo_proposta < 0.5", "impacto": "(0.5 - passo_proposta) * conv_oportunidade * amostra_coorte * (conv_ganho / conv_proposta) * ticket_medio", "acao": "Marcar o retorno da proposta antes de enviá-la e rever o que o diagnóstico prometeu mostrar.", "severidade": "media"}
+  ]
+}

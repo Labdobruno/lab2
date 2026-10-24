@@ -11,7 +11,7 @@ Aprovado pelo Bruno até a fase 8 (segunda operação).
 | **5. Quarter e fechamento de ciclo** ✅ | Planejar o quarter em 6 fases, cenários, programa de ciclos, retrato imutável do ciclo e aprendizados | `lq*`, `fr*`/`fi*`/`fd*`/`fa*`, `lpoPrograma` |
 | **6. Motor de hipóteses e qualidade de dados** ✅ | Biblioteca declarativa por pack, com impacto em R$ escrito como fórmula e não como código. Também:<br>• achados com orçamento de atenção;<br>• canvas de decisão;<br>• experimentos e memória comercial;<br>• checagens de qualidade de dados | `labMotorAvaliar`, `LAB_BIB_CORE`, `labCondicao`, `lbv*` |
 | **7. Studio** | Funis em grafo e campanhas de go-to-market, com o motor do construtor de hipóteses unificado ao do Studio | `gs*` (motor), `lbc*` |
-| **8. Segunda operação** | Pack `licitacao-b2b` e conector da fonte que ela usar | — |
+| **8. Segunda operação** ✅ | Pack `licitacao-b2b` e conector da fonte que ela usar | — |
 
 ## Pendências
 

@@ -22,7 +22,7 @@ p{margin:0 0 12px}
 .suave{color:var(--suave);font-size:.92rem}
 .cartao{background:var(--cartao);border:1px solid var(--linha);border-radius:12px;padding:16px;margin:12px 0}
 .barra{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:12px 0}
-select,input,button{font:inherit;color:inherit;background:var(--cartao);border:1px solid var(--linha);border-radius:8px;padding:10px 12px;min-height:44px}
+select,input,button{max-width:100%;font:inherit;color:inherit;background:var(--cartao);border:1px solid var(--linha);border-radius:8px;padding:10px 12px;min-height:44px}
 button{cursor:pointer}button.primario{background:var(--foco);border-color:var(--foco);color:#fff}
 :focus-visible{outline:3px solid var(--foco);outline-offset:2px}
 .grande{font-size:2.2rem;font-weight:700;line-height:1.1}
@@ -97,7 +97,7 @@ function controles(){
 }
 function abas(){
   function b(id,t){var x=el('button',{type:'button',texto:t,onclick:function(){estado.aba=id;estado.pessoa=null;desenhar()}});if(estado.aba===id)x.setAttribute('aria-current','page');return x}
-  return el('div',{class:'abas'},[b('ritmo','Ritmo'),b('equipe','Equipe e metas'),b('quarter','Quarter'),b('fechamento','Fechamento'),b('achados','Achados'),b('dados','Dados')]);
+  return el('div',{class:'abas'},[b('ritmo','Ritmo'),b('equipe','Equipe e metas'),b('quarter','Quarter'),b('fechamento','Fechamento'),b('achados','Achados'),b('dados','Dados'),b('operacoes','Operações')]);
 }
 function agrupar(linhas){
   var por={};
@@ -111,6 +111,7 @@ async function desenhar(){
   if(estado.aba==='fechamento')return telaFechamento();
   if(estado.aba==='achados')return telaAchados();
   if(estado.aba==='dados')return telaDados();
+  if(estado.aba==='operacoes')return telaOperacoes();
   app.appendChild(el('p',{class:'suave',texto:'Carregando…'}));
   var q=estado.data?('?data='+encodeURIComponent(estado.data)):'';
   var r;
@@ -412,12 +413,72 @@ async function telaDados(){
       c.exemplos.length?el('p',{class:'suave mini',texto:'Exemplos: '+c.exemplos.join(', ')}):null]));
   });
 }
+var ORDEM_ARQ=['pessoas','contas','negocios','transicoes','atividades','investimentos','recebimentos','contratos','eventos_cs'];
+function slugDe(t){return t.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40)}
+function ordemArq(nome){var n=nome.toLowerCase().replace(/[^a-z_]/g,' ');for(var i=0;i<ORDEM_ARQ.length;i++)if(n.indexOf(ORDEM_ARQ[i].replace('_',' '))===0||n.indexOf(ORDEM_ARQ[i])===0)return i;return 99}
+async function conectorDePlanilha(slug){
+  var lista=await api('/admin/conectores?operacao='+encodeURIComponent(slug));
+  var c=lista.filter(function(x){return x.tipo==='planilha'})[0];
+  if(c)return c.id;
+  var n=await api('/admin/conectores',{operacao:slug,tipo:'planilha',nome:'planilhas'});
+  return n.id;
+}
+async function telaOperacoes(msg,ok,resultados){
+  limpar();
+  var packs,ops;
+  try{packs=await api('/admin/packs');ops=await api('/admin/operacoes');estado.ops=ops}
+  catch(e){if(e.message==='401')return telaEntrada('Acesso recusado. Entre de novo.');app.appendChild(el('p',{class:'erro',texto:'Não consegui carregar: '+e.message}));return}
+  app.appendChild(abas());
+  app.appendChild(el('h1',{texto:'Operações'}));
+  app.appendChild(el('p',{class:'suave',texto:'Uma operação é uma empresa ou projeto de receita, com o seu modelo de negócio (pack).'}));
+  if(ops.length)app.appendChild(controles());
+  if(msg)app.appendChild(el('p',{class:ok?'ok':'erro',texto:msg}));
+  app.appendChild(el('div',{class:'cartao'},[el('h2',{texto:'Suas operações'}),ops.length?null:el('p',{class:'suave',texto:'Nenhuma ainda.'})].concat(ops.map(function(o){
+    return el('div',{class:'pessoa'},[el('span',{texto:o.nome+' · '+o.pack_id}),o.slug===estado.slug?el('span',{class:'chip no_ritmo',texto:'Em uso'}):el('button',{type:'button',texto:'Usar',onclick:function(){estado.slug=o.slug;guardar('slug',o.slug);estado.pessoa=null;telaOperacoes()}})]);
+  }))));
+  var nome=el('input',{class:'largo',type:'text',maxlength:'80',id:'on'});
+  var pk=el('select',{id:'op'},packs.filter(function(p){return p.ok}).map(function(p){return el('option',{value:p.id,texto:p.nome||p.id})}));
+  app.appendChild(el('div',{class:'cartao'},[el('h2',{texto:'Nova operação'}),
+    el('form',{onsubmit:async function(e){e.preventDefault();
+      var slug=slugDe(nome.value);if(!slug||!nome.value.trim())return telaOperacoes('Dê um nome à operação.');
+      try{await api('/admin/operacoes',{slug:slug,nome:nome.value.trim(),packId:pk.value});await conectorDePlanilha(slug);estado.slug=slug;guardar('slug',slug);telaOperacoes('Operação criada e já preparada para importar planilhas.',true)}
+      catch(x){telaOperacoes(x.message)}}},
+      [el('p',{},[el('label',{for:'on',texto:'Nome'}),nome]),el('p',{},[el('label',{for:'op',texto:'Modelo de negócio (pack)'}),pk]),el('button',{class:'primario',type:'submit',texto:'Criar operação'})])]));
+  if(!ops.length)return;
+  var arq=el('input',{type:'file',id:'ar',accept:'.csv,text/csv',multiple:'multiple','aria-label':'Planilhas CSV'});
+  var atual=ops.filter(function(o){return o.slug===estado.slug})[0];
+  app.appendChild(el('div',{class:'cartao'},[el('h2',{texto:'Importar planilhas para "'+(atual?atual.nome:'')+'"'}),
+    el('p',{class:'suave',texto:'Escolha arquivos CSV. O tipo vem do começo do nome: pessoas, contas, negocios, transicoes, atividades, investimentos, recebimentos, contratos ou eventos_cs (ex.: negocios-outubro.csv). Importo na ordem certa, e reenviar o mesmo arquivo não duplica nada.'}),
+    el('p',{},[arq]),
+    el('button',{class:'primario',type:'button',texto:'Importar',onclick:async function(){
+      var fs=Array.prototype.slice.call(arq.files||[]).sort(function(a,b){return ordemArq(a.name)-ordemArq(b.name)});
+      if(!fs.length)return telaOperacoes('Escolha pelo menos um arquivo.');
+      var res=[];
+      try{
+        var cid=await conectorDePlanilha(estado.slug);
+        for(var i=0;i<fs.length;i++){
+          var texto=await fs[i].text();
+          var r=await fetch('/admin/conectores/'+cid+'/importar?nome='+encodeURIComponent(fs[i].name),{method:'POST',headers:{authorization:'Bearer '+(ler('token')||'')},body:texto});
+          var j={};try{j=await r.json()}catch(x){}
+          if(r.status===401)return telaEntrada('Acesso recusado. Entre de novo.');
+          res.push({nome:fs[i].name,ok:r.ok&&j.ok!==false,j:j});
+        }
+        var erros=[];
+        if(res.some(function(x){return x.j&&x.j.erros>0})){var sa=await api('/admin/conectores/'+cid+'/saude');erros=(sa.errosRecentes||[]).slice(0,5)}
+        telaOperacoes(res.every(function(x){return x.ok&&!(x.j.erros>0)})?'Importação concluída.':'Importação terminou com avisos. Veja abaixo.',res.every(function(x){return x.ok&&!(x.j.erros>0)}),{res:res,erros:erros});
+      }catch(x){telaOperacoes(x.message)}}})]));
+  if(resultados){
+    app.appendChild(el('div',{class:'cartao'},[el('h2',{texto:'Resultado da importação'})].concat(resultados.res.map(function(x){
+      return el('p',{},[el('span',{class:'chip '+(x.ok&&!(x.j.erros>0)?'no_ritmo':'atras'),texto:x.ok&&!(x.j.erros>0)?'OK':'Atenção'}),' '+x.nome+' · '+(x.j.falha?x.j.falha:(x.j.aplicados||0)+' linha(s) aplicada(s)'+(x.j.erros?', '+x.j.erros+' com erro':'')+(x.j.erro&&!x.j.falha?' · '+x.j.erro:''))])
+    })).concat(resultados.erros.map(function(e){return el('p',{class:'erro mini',texto:e.tipo+': '+e.erro})}))));
+  }
+}
 async function iniciar(){
   if(!ler('token'))return telaEntrada();
   limpar();app.appendChild(el('p',{class:'suave',texto:'Carregando…'}));
   try{estado.ops=await api('/admin/operacoes')}
   catch(e){return telaEntrada(e.message==='401'?'Acesso recusado. Entre de novo.':'Não consegui falar com a API: '+e.message)}
-  if(!estado.ops.length){limpar();cabecalho('LAB','Ainda não existe nenhuma operação.').forEach(function(n){if(n)app.appendChild(n)});app.appendChild(el('div',{class:'cartao'},[el('p',{texto:'Crie a primeira operação (passo 4 do guia de implantação) e volte aqui.'})]));return}
+  if(!estado.ops.length){estado.aba='operacoes';return telaOperacoes()}
   var salvo=ler('slug');
   estado.slug=estado.ops.some(function(o){return o.slug===salvo})?salvo:estado.ops[0].slug;
   desenhar();

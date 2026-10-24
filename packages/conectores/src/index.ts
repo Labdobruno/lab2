@@ -9,3 +9,4 @@ export * from './registro.js';
 export { conectorAmicta, comandosDoEvento, comandosDoNegocio } from './fontes/amicta.js';
 export { conectorCanonico } from './fontes/canonico.js';
 export { conectorPlanilha, traduzirLinha, TIPOS_PLANILHA } from './fontes/planilha.js';
+export { noFuso, localizarDatas } from './fuso.js';

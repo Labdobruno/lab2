@@ -7,6 +7,7 @@
 import { chaveDe, ordenarComandos, type Comando, type ComandoDe } from '@lab/nucleo';
 import type { Sql, TransactionSql } from 'postgres';
 import { ErroDeEntrada, type Mapa } from './tipos.js';
+import { localizarDatas } from './fuso.js';
 
 type Tx = Sql | TransactionSql;
 
@@ -24,12 +25,15 @@ export class Aplicador {
   private etapaPorId = new Map<string, Etapa>();
   private funis = new Map<string, Funil>();
   private carregado = false;
+  private fuso = 'America/Sao_Paulo';
 
   constructor(private readonly tx: Tx, private readonly ctx: ContextoAplicacao) {}
 
   private async carregar() {
     if (this.carregado) return;
     const op = this.ctx.operacaoId;
+    const [o] = await this.tx<{ fuso: string }[]>`select fuso from lab.operacao where id = ${op}`;
+    if (o?.fuso) this.fuso = o.fuso;
     for (const e of await this.tx<Etapa[]>`select id, chave, papel, funil_id, ordem from lab.etapa where operacao_id = ${op}`) {
       this.etapas.set(e.chave, e); this.etapaPorId.set(e.id, e);
     }
@@ -40,7 +44,7 @@ export class Aplicador {
   /* aplica os comandos de UMA entrada bruta; quem chama cuida da transação/savepoint */
   async aplicar(comandos: readonly Comando[]): Promise<{ aplicados: number }> {
     await this.carregar();
-    const ordenados = ordenarComandos(comandos);
+    const ordenados = ordenarComandos(comandos.map(c => localizarDatas(c, this.fuso)));
     const comTransicaoExplicita = new Set(ordenados.filter(c => c.tipo === 'negocio.transicao').map(c => (c as ComandoDe<'negocio.transicao'>).negocioRef));
     let aplicados = 0;
     for (const c of ordenados) {

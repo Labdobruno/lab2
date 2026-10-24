@@ -1,0 +1,4 @@
+id;conta;valor;inicio;status;recorrente;periodicidade_meses;negocio_id;fim;motivo_cancelamento
+C-001;Construtora Alfa (exemplo);4.000,00;01/09/2026;ativo;sim;1;L-001;;
+C-002;Engenharia Beta (exemplo);3.000,00;20/09/2026;ativo;sim;1;L-002;;
+C-003;Cliente Antigo (exemplo);2.500,00;01/01/2026;cancelado;sim;1;;30/09/2026;Passou a fazer internamente

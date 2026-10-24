@@ -104,7 +104,7 @@ export function criarApp(opts: { sql: Sql; env: Ambiente; fetch?: typeof fetch; 
     const m = req.method;
 
     if (recurso === 'packs' && m === 'GET') {
-      return json(Object.keys(CATALOGO).map(p => { const r = resolverPack(p, CATALOGO); return { id: p, ok: r.ok, versao: r.pack?.versao, linhagem: r.pack?.linhagem, erros: r.erros, avisos: r.avisos }; }));
+      return json(Object.keys(CATALOGO).map(p => { const r = resolverPack(p, CATALOGO); return { id: p, nome: r.pack?.nome, descricao: r.pack?.descricao, ok: r.ok, versao: r.pack?.versao, linhagem: r.pack?.linhagem, erros: r.erros, avisos: r.avisos }; }));
     }
 
     if (recurso === 'metricas' && id === 'dicionario' && m === 'GET') return json(DICIONARIO);

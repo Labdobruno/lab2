@@ -39,3 +39,10 @@ Cada decisão tem o porquê, para não ser refeita sem motivo.
 - **Canvas de decisão** só acrescenta. **Experimento** guarda o ponto de partida no dia em que começa; ao concluir mede o valor de hoje contra o alvo e escreve o resultado em `lab.aprendizado` (memória comercial). Encerrado, não muda mais.
 - **Operações antigas:** se o pack guardado na operação não tem a biblioteca, o Worker a resolve de novo pelo pack e pelos ajustes da operação.
 - **Correção importante:** o driver do Postgres não converte listas (`text[]`) quando `fetch_types` está desligado, como no pooler do Supabase. Consultas passam a devolver `jsonb`. Isso corrigiu as etapas já alcançadas nas coortes da fase 2.
+
+## Fase 8: segunda operação (licitação)
+
+- **Pack, sem conector novo:** a fonte de dados da licitação não está definida. Em vez de inventar um conector, o pack usa as portas genéricas (planilha e webhook canônico), com planilhas de exemplo e um teste que importa todas e confere as métricas.
+- **Sem números de negócio inventados:** o pack não fixa margem, desconto máximo nem impostos.
+- **Tela de Operações:** criar operação (escolhendo o pack) e importar CSV pelo navegador, com os arquivos aplicados na ordem certa.
+- **Correção de fuso:** datas sem horário e horários sem fuso vindos de planilha passam a valer no fuso da operação (`packages/conectores/src/fuso.ts`). O teste da licitação revelou que o negócio do dia 1º caía no mês anterior.
