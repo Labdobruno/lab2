@@ -8,10 +8,11 @@ compatibility_date = "2026-10-01"
 compatibility_flags = ["nodejs_compat"]
 
 # Login do administrador pelo Supabase (nada aqui é segredo). O login só liga quando as três existem;
-# falta SUPABASE_ANON_KEY (chave "publishable", pública): npx wrangler secret put SUPABASE_ANON_KEY, ou ponha em [vars].
+# SUPABASE_ANON_KEY é a chave "publishable", pública por definição (nunca ponha aqui a "secret" nem a service_role).
 [vars]
 SUPABASE_URL = "https://jthutggtstdxldxjbiup.supabase.co"
 ADMIN_EMAIL = "brunobsantosmoraes@gmail.com"
+SUPABASE_ANON_KEY = "sb_publishable_1ClG_ttoQEEn1QDs95F8wA_Y_FYSs_g"   # chave pública (publishable), pode ficar no repositório
 
 [triggers]
 crons = ["*/15 * * * *"]
