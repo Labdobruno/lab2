@@ -29,7 +29,7 @@ const chamar = (app: (r: Request) => Promise<Response>, metodo: string, caminho:
   app(new Request(`https://lab.teste${caminho}`, { method: metodo, headers: { ...(token ? { authorization: `Bearer ${token}` } : {}) }, ...(corpo ? { body: JSON.stringify(corpo) } : {}) }));
 
 describe('login do administrador pelo Supabase', () => {
-  const novo = (env: object = ENV) => { const s = supabase(); return { ...s, app: criarApp({ sql: undefined as never, env, fetch: s.f }) }; };
+  const novo = (env: Record<string, unknown> = ENV) => { const s = supabase(); return { ...s, app: criarApp({ sql: undefined as never, env, fetch: s.f }) }; };
 
   it('sem configuração, o login fica desligado e o ADMIN_TOKEN segue valendo', async () => {
     const { app } = novo({ ADMIN_TOKEN: 'token-de-teste-com-mais-de-24-caracteres' });
