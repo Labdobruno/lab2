@@ -55,3 +55,41 @@ Cada ritual pode ser **registrado**: uma foto do plano (alvos, feito, compromiss
 ## O que ainda não entrou (próximas ondas)
 
 Tarefas e agenda (compromissos com hora), cadência por canal, próximo passo por negócio, pipeline de vendas por pessoa, metas por canal. Quando houver fonte, entram pelos mesmos campos (`fontes`), sem mudar as regras.
+
+---
+
+# Onda 2: "Vamos bater a meta?", a semana e o Fechamento do dia
+
+## Vamos bater a meta? (aba **Meta**)
+
+A resposta vem da **projeção ajustada** do ciclo, lida no ritual escolhido (hoje conta 0, ½ ou 1 dia útil):
+
+| Projeção | Como é calculada |
+|---|---|
+| Planejada | a meta do ciclo |
+| Ritmo atual | realizado + realizado ÷ dias úteis decorridos × dias úteis restantes |
+| Histórica | realizado + pipeline aberto × chance da etapa virar venda × chance de fechar a tempo |
+| Ajustada | histórica + leads que ainda vão entrar × conversão lead → venda × fração dos ciclos de venda que cabe no que resta |
+
+- **Chance de bater a meta de vendas**: Poisson com média = vendas que ainda devem entrar pela projeção ajustada. Só com amostra de ticket (≥ 10 vendas na janela histórica); senão diz por que não calculou.
+- **Fora da curva**: negócio acima de 5× o ticket não sustenta a projeção; aparece à parte com valor e chance.
+- **Histórico por coorte**: lead → venda e lead → agendada vêm dos negócios criados numa janela que termina 30 dias atrás (maturação). Ritmo de leads: até o 5º dia útil mistura o ciclo com os últimos 90 dias.
+- **Resposta**: ≥ 100% da meta "sim"; ≥ 95% "provável"; ≥ 75% "em risco"; abaixo "não". Com menos de 3 dias úteis, "cedo para dizer".
+- **Sinais com veredito**: meta em risco, trajetória (< 85% do esperado; grave < 60%), demanda insuficiente, capacidade por pessoa, conversão × histórico (amostra pequena sai com confiança baixa, nunca some), "atividade em dia, resultado abaixo", dados ausentes. Cada sinal tem a **classe do desvio** (volume feito com taxa baixa nunca vira "falta de esforço") e o **veredito conjunto** evita alertas contraditórios. Incidentes por zona do funil: impacto = o maior, não a soma.
+- **Contingência**: régua 100 / 90 / 75 (no ritmo, atenção, contingência, crítico) com três critérios: ritmo (realizado ÷ esperado), projeção (ajustada ÷ meta) e esforço (ritmo necessário ÷ ritmo médio: 1,2× · 1,5× · 2×). Trajetória dia a dia da receita com alvo do dia que fecha exatamente a meta; por vendedor, o alvo de cada etapa até o fim do ciclo; dois dias seguidos abaixo de 90% do alvo = contingência da atividade. Ações são hipóteses; crítico exige decisão com data; a meta nunca é reduzida sozinha.
+
+## Semana (aba **Semana**)
+
+- **Esta semana**: "Onde a semana vai fechar?" Projeção = feito + ritmo × dias úteis que faltam; o ritmo desta semana é puxado para o das 4 semanas anteriores (o histórico pesa como 5 dias úteis). Faixa entre a pior e a melhor das 4 semanas. Situação: batida / vai bater / em risco (≥ 85%) / não bate. "O que precisa acontecer até domingo" com o múltiplo do ritmo normal e a ação do roteiro. "Na mesa": propostas e negociações abertas com a chance histórica (coorte de 150 a 15 dias atrás). Semanas do ciclo: feito / meta.
+- **Semana passada**: "O que deu certo e o que deu errado?" Cada indicador contra a meta da semana (≥ 100% bom; < 85% ruim) e contra a média das 4 semanas anteriores (±15% volumes, ±5 p.p. taxas). Taxas da semana são de fluxo, não de coorte. Volume pequeno e amostra pequena são neutros. Causas: volume × ticket, elo anterior do funil, por pessoa e por origem ("mostra onde olhar; não prova a causa"). Roteiro de hipóteses de solução por indicador. "Copiar resumo" para o WhatsApp.
+
+## Fechamento do dia (aba **Fechamento do dia**)
+
+Relatório gerencial gerado **no servidor** pelo cron de 15 min: no primeiro tique depois das **17h30** (fuso da operação; `parametros.fechamento.hora` no pack) gera uma vez; às **23h30** roda mais uma vez para captar registros atrasados; falhou → tenta de novo (até 4). Sem expediente (dia não útil ou todo mundo ausente) não gera. Trava contra duas execuções ao mesmo tempo; cada execução fica em `lab.dia_execucao`.
+
+- **Imutável**: o `original` nunca muda (gatilho no banco); um recálculo com a mesma essência é "sem mudança"; com essência diferente entra como **complemento** com "o que mudou" (ex.: "Tentativas da equipe hoje: 3/11 → 11/11"). A essência (comparações, alertas, situação das pessoas, pendências) é assinada com SHA-256.
+- **Nada de fórmula nova**: o relatório só junta o que o plano do dia e o ciclo já calculam. "Sem dado" nunca vira zero; um dia é sinal a investigar.
+- Seções: resumo (selo, objetivos atingidos, pessoas com atenção, desvio/avanço/risco/decisão/meta), alertas (nível 2 e 3, com esperado × aconteceu × evidência × confiança × causa), previsto × realizado, deu certo, deu errado, quem precisa de atenção (6 situações: **sem registro ≠ não executou**, bloqueio, falta de execução, resultado, fora do expediente, sem meta), avanços, intervenções (problema, evidência, consequência, ação, responsável, prazo, indicador), metas do ciclo e do quarter, limites da leitura.
+- **Recorrência**: o mesmo alerta no 3º relatório seguido sobe de nível e vira "conversa de causa"; a **decisão do gestor** registrada é citada nos dias seguintes se o desvio continuar; desvio que some depois de uma decisão aparece em "deu certo" com "um dia não prova".
+- Antes de gravado, a tela mostra a **prévia ao vivo** (não aceita decisões). "Gerar agora" não duplica.
+- Ainda sem fonte na V2: tarefas, agenda (no-show), cadência. Entram no relatório como limitação.

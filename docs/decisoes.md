@@ -67,3 +67,15 @@ Cada decisão tem o porquê, para não ser refeita sem motivo.
 - **Sem fonte ≠ zero.** Tarefas, agenda, cadência e próximo passo não existem na V2 ainda; o plano diz "sem fonte" e não conta como zero.
 - **Correções na V2 antiga**: `metaDoDia` usava `ceil(meta ÷ dias úteis)` (somava mais que a meta); o build-up arredondava a cada degrau (inflava tentativas). Ambos corrigidos em `packages/planejamento` com testes.
 - **Uma pergunta por tela.** Manhã: "O que fazer hoje para o dia ser um sucesso?"; tarde: "Como está o dia até agora?"; fim: "O dia foi um sucesso?"; gestor: "Quem precisa de mim hoje?". Situação do ciclo, taxas, gargalo e ajustes do administrador ficam fechados em "detalhes".
+
+## Onda 2: vamos bater a meta?, semana e Fechamento do dia
+
+- **Motores puros primeiro, com os testes da V1**: contingência (contingencia.test.js), objetivos/critérios/veredito/ponte (lab_objetivos.test.js), Fechamento do dia (daily_motor.test.js e a regra do tique de daily_worker.test.js) rodam com os mesmos números. Projeção, forecast e semana (sem teste puro na V1) ganharam testes próprios com valores calculados à mão.
+- **Hoje conta a fração do ritual** também na projeção e na contingência (a V1 usava meio dia fixo). A manhã responde "no ritmo de ontem"; o fim do dia, com hoje inteiro.
+- **Coorte com maturação**: lead → venda e lead → agendada vêm de negócios criados numa janela que termina 30 dias antes de hoje, para não medir conversão de quem ainda não teve tempo. As taxas de atividade (agendamento → realizada etc.) continuam vindo de `taxasHistoricas`.
+- **Pipeline por chance × prazo**: p(venda | etapa) = ganhos ÷ encerrados que passaram pela etapa; p(fechar a tempo) = fração das durações (entrada na etapa → fechamento) que cabe nos dias que restam. Sem duração histórica, p(prazo) é nula e a etapa não sustenta projeção (não inventa).
+- **Fechamento do dia no cron existente** (a cada 15 min), por operação e no fuso dela, em vez de um Worker separado como na V1. Trava com `pg_advisory_xact_lock`; execução presa expira em 10 minutos.
+- **Imutabilidade por gatilho + assinatura**: `lab.dia_fechamento.original` nunca muda e a linha não se apaga; a essência é assinada (SHA-256) e a tela mostra "íntegro" ou "ALTERADO", como no retrato do ciclo.
+- **Decisões do gestor dentro do relatório** (`acoes`, com histórico de até 20 por chave), sem tabela nova: é o que a recorrência lê no dia seguinte.
+- **Semana sem hipóteses da biblioteca** por enquanto: a V2 tem hipóteses em linguagem de fórmula; a compatibilidade "condições da semana" entra na onda da inteligência.
+- **Abas**: Dia · Meta · Semana · Fechamento do dia na frente; o resto em "Mais ▾". A aba "Ritmo" antiga continua acessível, mas a Meta a substitui.

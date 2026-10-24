@@ -5,6 +5,7 @@
 export const CSP = "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
 
 import { TELA_DIA } from './tela_dia.js';
+import { TELA_CICLO } from './tela_ciclo.js';
 
 export const PAGINA = `<!doctype html>
 <html lang="pt-BR">
@@ -33,7 +34,7 @@ button{cursor:pointer}button.primario{background:var(--foco);border-color:var(--
 .no_ritmo{background:var(--ok-f);color:var(--ok)}.atencao{background:var(--at-f);color:var(--at)}.atras{background:var(--ruim-f);color:var(--ruim)}.sem{background:var(--linha);color:var(--suave)}
 table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:8px 4px;border-bottom:1px solid var(--linha);font-size:.95rem}
 .erro{color:var(--ruim);font-weight:600}.ok{color:var(--ok);font-weight:600}.abas{display:flex;gap:8px;margin:0 0 4px;flex-wrap:wrap}.passo{display:flex;gap:10px;align-items:center;padding:6px 0}.num{display:inline-flex;width:28px;height:28px;border-radius:50%;align-items:center;justify-content:center;font-weight:700;border:2px solid var(--linha);flex:none}.num.feito{background:var(--ok-f);border-color:var(--ok);color:var(--ok)}.num.agora{border-color:var(--foco);color:var(--foco)}.cenarios{display:grid;gap:8px}.mini{font-size:.9rem}.svgbox{overflow-x:auto;border:1px solid var(--linha);border-radius:8px;padding:6px}.svgbox svg{display:block}.svgbox text{fill:var(--texto);font:11px system-ui,sans-serif}details{margin:8px 0}summary{cursor:pointer;min-height:44px;display:flex;align-items:center}textarea,.largo{width:100%;font:inherit;color:inherit;background:var(--cartao);border:1px solid var(--linha);border-radius:8px;padding:10px}.valor{font-size:1.5rem;font-weight:700}ul.ev{margin:6px 0;padding-left:18px}.alta{background:var(--ruim-f);color:var(--ruim)}.media{background:var(--at-f);color:var(--at)}.baixa{background:var(--linha);color:var(--suave)}.abas button[aria-current=page]{border-color:var(--foco);font-weight:700}form.linha{display:flex;gap:8px;flex-wrap:wrap;align-items:end}label{display:block;font-size:.85rem;color:var(--suave)}label.inline{display:inline-flex;align-items:center;gap:6px;color:var(--texto);font-size:.9rem}
-.prog{height:10px;border-radius:999px;background:var(--linha);overflow:hidden;margin:8px 0}.prog-f{height:100%;background:var(--foco);border-radius:999px;transition:width .3s}.prog-f.cheia{background:var(--ok)}ul.compromissos{list-style:none;margin:8px 0 0;padding:0}.compromisso{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-top:1px solid var(--linha)}.compromisso>span:nth-child(2){flex:1}.marca{display:inline-flex;width:26px;height:26px;border-radius:50%;align-items:center;justify-content:center;border:2px solid var(--linha);flex:none;font-weight:700;color:var(--suave)}.marca.feita{background:var(--ok-f);border-color:var(--ok);color:var(--ok)}button.mini{min-height:36px;padding:6px 10px;font-size:.88rem}.acao{padding:10px 0;border-top:1px solid var(--linha)}.acao-t{margin:0 0 4px}.acao.justificada{opacity:.75}.just{color:var(--at)}.prod{padding:8px 0;border-top:1px solid var(--linha)}.prod:first-of-type{border-top:0}.critica{background:var(--ruim-f);color:var(--ruim)}.alta{background:var(--at-f);color:var(--at)}.normal{background:var(--linha);color:var(--texto)}.estrategica{background:#e8eefc;color:#2457d6}@media (prefers-color-scheme:dark){.estrategica{background:#1b2740;color:#8aa9ff}}.rituais{margin:4px 0 8px}.rituais button{flex:1}.pessoa{flex-wrap:wrap}.pessoa>span:first-child{flex:1 1 200px}
+.prog{height:10px;border-radius:999px;background:var(--linha);overflow:hidden;margin:8px 0}.prog-f{height:100%;background:var(--foco);border-radius:999px;transition:width .3s}.prog-f.cheia{background:var(--ok)}ul.compromissos{list-style:none;margin:8px 0 0;padding:0}.compromisso{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-top:1px solid var(--linha)}.compromisso>span:nth-child(2){flex:1}.marca{display:inline-flex;width:26px;height:26px;border-radius:50%;align-items:center;justify-content:center;border:2px solid var(--linha);flex:none;font-weight:700;color:var(--suave)}.marca.feita{background:var(--ok-f);border-color:var(--ok);color:var(--ok)}button.mini{min-height:36px;padding:6px 10px;font-size:.88rem}.acao{padding:10px 0;border-top:1px solid var(--linha)}.acao-t{margin:0 0 4px}.acao.justificada{opacity:.75}.just{color:var(--at)}.prod{padding:8px 0;border-top:1px solid var(--linha)}.prod:first-of-type{border-top:0}.critica{background:var(--ruim-f);color:var(--ruim)}.alta{background:var(--at-f);color:var(--at)}.normal{background:var(--linha);color:var(--texto)}.estrategica{background:#e8eefc;color:#2457d6}@media (prefers-color-scheme:dark){.estrategica{background:#1b2740;color:#8aa9ff}}.rituais{margin:4px 0 8px}.rituais button{flex:1}details.mais{margin:0;display:inline-block}details.mais summary{min-height:44px;padding:0 12px;border:1px solid var(--linha);border-radius:8px;background:var(--cartao)}details.mais[open] summary{border-color:var(--foco)}details.mais button{margin:4px 4px 0 0}h3{font-size:1rem;margin:12px 0 4px}td.ok{color:var(--ok);font-weight:600}td.erro{color:var(--ruim)}.pessoa{flex-wrap:wrap}.pessoa>span:first-child{flex:1 1 200px}
 </style>
 </head>
 <body>
@@ -103,7 +104,11 @@ function controles(){
 }
 function abas(){
   function b(id,t){var x=el('button',{type:'button',texto:t,onclick:function(){estado.aba=id;estado.pessoa=null;desenhar()}});if(estado.aba===id)x.setAttribute('aria-current','page');return x}
-  return el('div',{class:'abas'},[b('dia','Dia'),b('ritmo','Ritmo'),b('equipe','Equipe e metas'),b('quarter','Quarter'),b('fechamento','Fechamento'),b('achados','Achados'),b('dados','Dados'),b('studio','Studio'),b('operacoes','Operações')]);
+  var mais=[['equipe','Equipe e metas'],['quarter','Quarter'],['fechamento','Fechar ciclo'],['achados','Achados'],['dados','Dados'],['studio','Studio'],['operacoes','Operações'],['ritmo','Ritmo (antigo)']];
+  var atual=mais.filter(function(m){return m[0]===estado.aba})[0];
+  var d=el('details',{class:'mais'},[el('summary',{texto:atual?atual[1]+' ▾':'Mais ▾'})].concat(mais.map(function(m){return b(m[0],m[1])})));
+  if(atual)d.setAttribute('open','');
+  return el('div',{class:'abas'},[b('dia','Dia'),b('ciclo','Meta'),b('semana','Semana'),b('fechdia','Fechamento do dia'),d]);
 }
 function agrupar(linhas){
   var por={};
@@ -113,6 +118,9 @@ function agrupar(linhas){
 async function desenhar(){
   limpar();
   if(estado.aba==='dia')return telaDia();
+  if(estado.aba==='ciclo')return telaCiclo();
+  if(estado.aba==='semana')return telaSemana();
+  if(estado.aba==='fechdia')return telaFechamentoDia();
   if(estado.aba==='equipe')return telaEquipe();
   if(estado.aba==='quarter')return telaQuarter();
   if(estado.aba==='fechamento')return telaFechamento();
@@ -610,6 +618,7 @@ async function telaStudio(msg,ok){
   app.appendChild(el('div',{class:'cartao'},blocos));
 }
 ${TELA_DIA}
+${TELA_CICLO}
 async function iniciar(){
   if(!ler('token'))return telaEntrada();
   limpar();app.appendChild(el('p',{class:'suave',texto:'Carregando…'}));

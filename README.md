@@ -8,6 +8,7 @@ Central de inteligência de receita do Bruno. Cobre o funil borboleta inteiro: g
 
 | Peça | O que faz | Onde |
 |---|---|---|
+| **Vamos bater a meta?, semana e Fechamento do dia (Onda 2)** | Projeção do ciclo (planejada, ritmo, histórica com pipeline × chance × prazo, ajustada) e chance de bater; negócios fora da curva; sinais com classe do desvio e veredito; contingência (régua 100/90/75, trajetória, alvo pessoa × dia, ações); semana passada (deu certo × errado, causas, roteiro) e esta semana (projeção, na mesa); Fechamento do dia gerado às 17h30 no servidor, imutável, com complementos, decisões do gestor e recorrência | `packages/dia/`, `docs/dia.md`, `…/dia/ciclo`, `…/dia/semana`, `…/dia/fechamento`, abas **Meta**, **Semana**, **Fechamento do dia** |
 | **Plano do dia (Onda 1)** | "O que fazer hoje para o dia ser um sucesso?" por pessoa, lido em três rituais (manhã, tarde, fim do dia): meta do dia inteira + recuperação distribuída, objetivos da semana, situação, viabilidade frente à capacidade, negócios parados, ações com por quê / o que ganha / se não fizer, justificativas, fotos imutáveis de cada ritual e memória plano × executado. "Quem precisa de mim hoje?" para o gestor. Regras portadas da V1 com os testes dela | `packages/dia/`, `docs/dia.md`, `…/dia`, `…/dia/equipe`, aba **Dia** |
 | Vocabulário canônico | Papéis de etapa da borboleta, tipos de atividade, canais, motivos de perda, CS | `packages/nucleo/src/papeis.ts` |
 | Comandos canônicos | A única linguagem que entra no banco (11 comandos) | `packages/nucleo/src/comandos.ts` |
