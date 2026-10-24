@@ -3,3 +3,6 @@ export * from './motor.js';
 export * from './tipos.js';
 export * from './acoes.js';
 export * from './consultas.js';
+export * from './contingencia.js';
+export * from './objetivos.js';
+export * from './projecao.js';
