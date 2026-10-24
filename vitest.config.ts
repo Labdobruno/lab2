@@ -11,6 +11,7 @@ export default defineConfig({
       '@lab/ciclos': fileURLToPath(new URL('./packages/ciclos/src/index.ts', import.meta.url)),
       '@lab/hipoteses': fileURLToPath(new URL('./packages/hipoteses/src/index.ts', import.meta.url)),
       '@lab/studio': fileURLToPath(new URL('./packages/studio/src/index.ts', import.meta.url)),
+      '@lab/dia': fileURLToPath(new URL('./packages/dia/src/index.ts', import.meta.url)),
     },
   },
   test: {

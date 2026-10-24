@@ -27,6 +27,9 @@
       ],
       "@lab/studio": [
         "packages/studio/src/index.ts"
+      ],
+      "@lab/dia": [
+        "packages/dia/src/index.ts"
       ]
     }
   },

@@ -49,7 +49,16 @@
      POST /admin/operacoes/:slug/fechar-ciclo?data=   retrato imutável e assinado do ciclo
      GET  /admin/operacoes/:slug/retratos
      GET|POST /admin/operacoes/:slug/aprendizados     { tipo, texto, cicloInicio? }
-     GET  /admin/operacoes/:slug/metricas?de=AAAA-MM-DD&ate=AAAA-MM-DD   canais, coorte, fluxo, vendas e retenção (somente leitura) */
+     GET  /admin/operacoes/:slug/metricas?de=AAAA-MM-DD&ate=AAAA-MM-DD   canais, coorte, fluxo, vendas e retenção (somente leitura)
+     GET  /admin/operacoes/:slug/dia?pessoa=&data=&ritual=manha|tarde|fim   plano do dia de uma pessoa (ritual padrão: pela hora local)
+     GET  /admin/operacoes/:slug/dia/equipe?data=&ritual=                  a equipe para o gestor
+     POST /admin/operacoes/:slug/dia/foto         { pessoa, data?, ritual? }  grava a foto do ritual (uma por pessoa, dia e ritual; imutável)
+     GET  /admin/operacoes/:slug/dia/fotos?pessoa=&data=
+     POST /admin/operacoes/:slug/dia/nota         { pessoa, data?, chave, motivo, terceiro? } justifica uma ação | { pessoa, data?, chave, feito: true|false } marca cumprido
+     GET|POST /admin/operacoes/:slug/dia/lancamentos   ?pessoa=&de=&ate= | { pessoa, data, indicador, delta, motivo }  acréscimo do administrador ao realizado
+     POST /admin/operacoes/:slug/dia/lancamentos/:id/desfazer
+     GET|POST /admin/operacoes/:slug/ausencias    ?de=&ate= | { pessoa, data, motivo?, remover? }
+     POST /admin/operacoes/:slug/pessoas/:id/capacidade  { capacidade: n | null }  toques por dia que a pessoa consegue fazer */
 import { FUNCOES_PESSOA, resolverPack, VARIAVEIS, type PackResolvido } from '@lab/nucleo';
 import {
   atualizarPackDaOperacao, carregarConector, packDaOperacao, conectorDoTipo, criarOperacao, iguaisSeguro, importar, processarPendentes,
@@ -69,6 +78,10 @@ import {
 import {
   campanhas, criarCampanha, encerrarCampanha, ErroDeStudio, funisSalvos, grafoObservado, grafoSalvo, iniciarCampanha, salvarFunil, simularFunil, validarGrafo,
 } from '@lab/studio';
+import {
+  ausencias, dadosDoDia, definirCapacidade, desfazerLancamento, equipeDoDia, ErroDoDia, fotosDoDia, gravarFoto, justificar, lancamentos, lancar, marcarAusencia,
+  marcarFeito, RITUAIS, ritualDaHora, type Ritual,
+} from '@lab/dia';
 import { garantirMigracoes } from './migracoes.js';
 import { MIGRACOES } from './migracoes.gen.js';
 import type { Sql } from 'postgres';
@@ -240,6 +253,54 @@ export function criarApp(opts: { sql: Sql; env: Ambiente; fetch?: typeof fetch; 
           throw e;
         }
       }
+      if (id && (acao === 'dia' || acao === 'ausencias' || (acao === 'pessoas' && sub && partes[4] === 'capacidade'))) {
+        const op = await operacaoPlanejamento(sql, id);
+        if (!op) return erro('operação não encontrada', 404);
+        const agora = (opts.agora ?? (() => new Date()))(), hoje = hojeNoFuso(op.fuso, agora);
+        const data = url.searchParams.get('data') ?? hoje;
+        if (!dataValida(data)) return erro('data deve ser AAAA-MM-DD');
+        const horaLocal = Number(new Intl.DateTimeFormat('en-US', { timeZone: op.fuso, hour: 'numeric', hourCycle: 'h23' }).format(agora));
+        const ritualDe = (r: unknown): Ritual | null => (r == null || r === '' ? (data === hoje ? ritualDaHora(horaLocal) : 'fim') : (RITUAIS as readonly string[]).includes(String(r)) ? (r as Ritual) : null);
+        const quem = req.headers.get('x-lab-por')?.slice(0, 80) ?? null;
+        try {
+          if (acao === 'pessoas' && m === 'POST') {
+            const b = await corpoJSON(req);
+            return json(await definirCapacidade(sql, op, sub!, b.capacidade == null || b.capacidade === '' ? null : Number(b.capacidade)));
+          }
+          if (acao === 'ausencias' && m === 'GET') return json(await ausencias(sql, op, url.searchParams.get('de') ?? data.slice(0, 8) + '01', url.searchParams.get('ate') ?? data.slice(0, 8) + '31'));
+          if (acao === 'ausencias' && m === 'POST') { const b = await corpoJSON(req); return json(await marcarAusencia(sql, op, { pessoaId: String(b.pessoa ?? ''), data: String(b.data ?? data), motivo: b.motivo as string | undefined, remover: b.remover === true })); }
+          if (acao === 'dia') {
+            const ritual = ritualDe(url.searchParams.get('ritual'));
+            if (!ritual) return erro(`ritual deve ser: ${RITUAIS.join(', ')}`);
+            if (!sub && m === 'GET') {
+              const pessoa = url.searchParams.get('pessoa') ?? '';
+              if (!UUID.test(pessoa)) return erro('informe pessoa (id)');
+              return json(await dadosDoDia(sql, op, pessoa, data, ritual, agora));
+            }
+            if (sub === 'equipe' && m === 'GET') return json(await equipeDoDia(sql, op, data, ritual, agora));
+            if (sub === 'fotos' && m === 'GET') { const pessoa = url.searchParams.get('pessoa') ?? ''; if (!UUID.test(pessoa)) return erro('informe pessoa (id)'); return json(await fotosDoDia(sql, op, pessoa, data)); }
+            if (sub === 'foto' && m === 'POST') {
+              const b = await corpoJSON(req), pessoa = String(b.pessoa ?? ''), d = typeof b.data === 'string' ? b.data : data, r = ritualDe(b.ritual);
+              if (!UUID.test(pessoa)) return erro('informe pessoa (id)');
+              if (!dataValida(d)) return erro('data deve ser AAAA-MM-DD');
+              if (!r) return erro(`ritual deve ser: ${RITUAIS.join(', ')}`);
+              const D = await dadosDoDia(sql, op, pessoa, d, r, agora), f = await gravarFoto(sql, op, D);
+              return json({ ...f, data: d, ritual: r }, f.gravada ? 201 : 200);
+            }
+            if (sub === 'nota' && m === 'POST') {
+              const b = await corpoJSON(req), base = { pessoaId: String(b.pessoa ?? ''), data: typeof b.data === 'string' ? b.data : data, chave: String(b.chave ?? ''), por: quem };
+              if (typeof b.feito === 'boolean') return json(await marcarFeito(sql, op, { ...base, feito: b.feito }), 201);
+              return json(await justificar(sql, op, { ...base, motivo: String(b.motivo ?? ''), terceiro: b.terceiro === true }), 201);
+            }
+            if (sub === 'lancamentos' && !partes[4] && m === 'GET') { const pessoa = url.searchParams.get('pessoa') ?? ''; if (!UUID.test(pessoa)) return erro('informe pessoa (id)'); return json(await lancamentos(sql, op, pessoa, url.searchParams.get('de') ?? data.slice(0, 8) + '01', url.searchParams.get('ate') ?? data)); }
+            if (sub === 'lancamentos' && !partes[4] && m === 'POST') { const b = await corpoJSON(req); return json(await lancar(sql, op, { pessoaId: String(b.pessoa ?? ''), data: String(b.data ?? data), indicador: String(b.indicador ?? ''), delta: Number(b.delta), motivo: String(b.motivo ?? ''), por: quem }), 201); }
+            if (sub === 'lancamentos' && partes[4] && partes[5] === 'desfazer' && m === 'POST') { const n = Number(partes[4]); if (!Number.isInteger(n)) return erro('lançamento não encontrado', 404); return json(await desfazerLancamento(sql, op, n, quem)); }
+          }
+        } catch (e) {
+          if (e instanceof ErroDoDia) return erro(e.message, e.status);
+          throw e;
+        }
+      }
       if (id && acao === 'canais' && m === 'GET') {
         const [op] = await sql<{ id: string }[]>`select id from lab.operacao where slug = ${id}`;
         if (!op) return erro('operação não encontrada', 404);
@@ -248,7 +309,7 @@ export function criarApp(opts: { sql: Sql; env: Ambiente; fetch?: typeof fetch; 
       if (id && acao === 'pessoas') {
         const [op] = await sql<{ id: string }[]>`select id from lab.operacao where slug = ${id}`;
         if (!op) return erro('operação não encontrada', 404);
-        if (!sub && m === 'GET') return json(await sql`select id, nome, funcao, ativa from lab.pessoa where operacao_id = ${op.id} order by ativa desc, nome`);
+        if (!sub && m === 'GET') return json(await sql`select id, nome, funcao, ativa, capacidade_dia as "capacidadeDia" from lab.pessoa where operacao_id = ${op.id} order by ativa desc, nome`);
         if (!sub && m === 'POST') {
           const b = await corpoJSON(req);
           const nome = typeof b.nome === 'string' ? b.nome.trim() : '';

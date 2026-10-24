@@ -77,6 +77,62 @@ describe.skipIf(semBanco)('API', () => {
     expect((await chamar('GET', '/admin/operacoes/nao-existe/pessoas')).status).toBe(404);
   });
 
+  it('plano do dia pela API: pessoa, rituais, nota, lançamento, ausência, capacidade e equipe', async () => {
+    const appDia = criarApp({ sql, env: { ADMIN_TOKEN: TOKEN }, agora: () => new Date('2026-10-14T11:00:00Z') });   // 8h em São Paulo
+    const dia = (metodo: string, caminho: string, corpo?: unknown) => appDia(new Request(`https://lab.teste${caminho}`, { method: metodo, headers: { authorization: `Bearer ${TOKEN}`, 'content-type': 'application/json', 'x-lab-por': 'bruno' }, ...(corpo !== undefined ? { body: JSON.stringify(corpo) } : {}) }));
+    await dia('POST', '/admin/operacoes', { slug: 'dia', nome: 'Dia', packId: 'base' });
+    const p = await (await dia('POST', '/admin/operacoes/dia/pessoas', { nome: 'Sara', funcao: 'sdr' })).json() as any;
+    await dia('POST', '/admin/operacoes/dia/metas?data=2026-10-14', { metas: [{ indicador: 'tentativa', pessoaId: p.id, valor: 220 }, { indicador: 'agendamento', pessoaId: p.id, valor: 22 }] });
+    const [opl] = await sql`select id from lab.operacao where slug = 'dia'`;
+    const [tipo] = await sql`select id from lab.tipo_atividade where operacao_id = ${opl!.id} and papel = 'tentativa' limit 1`;
+    await sql`insert into lab.atividade (operacao_id, tipo_id, pessoa_id, em, quantidade) values (${opl!.id}, ${tipo!.id}, ${p.id}, '2026-10-14T10:30:00Z', 4)`;
+
+    expect((await dia('GET', '/admin/operacoes/dia/dia')).status).toBe(400);
+    expect((await dia('GET', `/admin/operacoes/dia/dia?pessoa=${p.id}&ritual=noite`)).status).toBe(400);
+    expect((await dia('GET', `/admin/operacoes/dia/dia?pessoa=00000000-0000-4000-8000-000000000000`)).status).toBe(404);
+    const D = await (await dia('GET', `/admin/operacoes/dia/dia?pessoa=${p.id}`)).json() as any;
+    expect(D).toMatchObject({ data: '2026-10-14', ritual: 'manha', fracaoHoje: 0 });   // ritual pela hora local
+    const t = D.prod.find((x: any) => x.k === 'tentativa');
+    expect(t).toMatchObject({ diario: true, metaTotal: 220, feito: 4 });
+    expect(D.sucesso.some((s: any) => s.k === 'prod:tentativa')).toBe(true);
+    expect((await (await dia('GET', `/admin/operacoes/dia/dia?pessoa=${p.id}&data=2026-10-13`)).json() as any).ritual).toBe('fim');   // outro dia: leitura de fim do dia
+
+    const f = await dia('POST', '/admin/operacoes/dia/dia/foto', { pessoa: p.id });
+    expect(f.status).toBe(201); expect(await f.json()).toMatchObject({ gravada: true, ritual: 'manha' });
+    expect((await dia('POST', '/admin/operacoes/dia/dia/foto', { pessoa: p.id })).status).toBe(200);
+    expect((await (await dia('GET', `/admin/operacoes/dia/dia/fotos?pessoa=${p.id}`)).json() as any[]).map(x => x.ritual)).toEqual(['manha']);
+
+    expect((await dia('POST', '/admin/operacoes/dia/dia/nota', { pessoa: p.id, chave: 'prod:tentativa', motivo: 'x' })).status).toBe(400);
+    expect((await dia('POST', '/admin/operacoes/dia/dia/nota', { pessoa: p.id, chave: 'prod:tentativa', motivo: 'sistema de telefonia caiu', terceiro: true })).status).toBe(201);
+    expect((await dia('POST', '/admin/operacoes/dia/dia/nota', { pessoa: p.id, chave: 'sem:agendamento', feito: true })).status).toBe(201);
+    const D2 = await (await dia('GET', `/admin/operacoes/dia/dia?pessoa=${p.id}&ritual=tarde`)).json() as any;
+    expect(D2.acoes.find((a: any) => a.chave === 'prod:tentativa').justificativa).toMatchObject({ motivo: 'sistema de telefonia caiu', terceiro: true, por: 'bruno' });
+    expect(D2.sucesso.find((s: any) => s.k === 'sem:agendamento')).toMatchObject({ ok: true, marcado: { por: 'bruno' } });
+
+    expect((await dia('POST', '/admin/operacoes/dia/dia/lancamentos', { pessoa: p.id, indicador: 'tentativa', delta: 5, motivo: 'oi' })).status).toBe(400);
+    const l = await (await dia('POST', '/admin/operacoes/dia/dia/lancamentos', { pessoa: p.id, indicador: 'tentativa', delta: 5, motivo: 'ligações feitas no celular' })).json() as any;
+    expect((await (await dia('GET', `/admin/operacoes/dia/dia?pessoa=${p.id}`)).json() as any).prod.find((x: any) => x.k === 'tentativa').feito).toBe(9);
+    expect((await dia('POST', `/admin/operacoes/dia/dia/lancamentos/${l.id}/desfazer`)).status).toBe(200);
+    expect((await dia('POST', `/admin/operacoes/dia/dia/lancamentos/${l.id}/desfazer`)).status).toBe(409);
+    expect((await dia('POST', `/admin/operacoes/dia/dia/lancamentos/abc/desfazer`)).status).toBe(404);
+    expect((await (await dia('GET', `/admin/operacoes/dia/dia/lancamentos?pessoa=${p.id}`)).json() as any[]).length).toBe(2);
+
+    expect((await dia('POST', '/admin/operacoes/dia/ausencias', { pessoa: p.id, data: '2026-10-15', motivo: 'médico' })).status).toBe(200);
+    expect((await (await dia('GET', '/admin/operacoes/dia/ausencias')).json() as any[])).toEqual([expect.objectContaining({ pessoa: 'Sara', data: '2026-10-15', motivo: 'médico' })]);
+    expect((await (await dia('GET', `/admin/operacoes/dia/dia?pessoa=${p.id}`)).json() as any).ciclo.amanha).toBe('2026-10-16');
+    expect((await dia('POST', '/admin/operacoes/dia/ausencias', { pessoa: p.id, data: '2026-10-15', remover: true })).status).toBe(200);
+
+    expect((await dia('POST', `/admin/operacoes/dia/pessoas/${p.id}/capacidade`, { capacidade: -3 })).status).toBe(400);
+    expect((await dia('POST', `/admin/operacoes/dia/pessoas/${p.id}/capacidade`, { capacidade: 45 })).status).toBe(200);
+    expect((await (await dia('GET', '/admin/operacoes/dia/pessoas')).json() as any[])[0].capacidadeDia).toBe(45);
+    expect((await (await dia('GET', `/admin/operacoes/dia/dia?pessoa=${p.id}`)).json() as any).cap).toMatchObject({ v: 45, fonte: 'apontada' });
+
+    const E = await (await dia('GET', '/admin/operacoes/dia/dia/equipe')).json() as any;
+    expect(E).toMatchObject({ data: '2026-10-14', ritual: 'manha', pessoas: 1 });
+    expect(E.quadro[0]).toMatchObject({ pessoa: 'Sara', funcao: 'Pré-vendas' });
+    expect((await dia('GET', '/admin/operacoes/nao-existe/dia/equipe')).status).toBe(404);
+  });
+
   it('hipóteses: biblioteca, achados, qualidade, decisão e experimento', async () => {
     expect(Object.keys(await (await chamar('GET', '/admin/hipoteses/variaveis')).json() as object)).toContain('taxa_ganho');
     await chamar('POST', '/admin/operacoes', { slug: 'hip', nome: 'Hip', packId: 'base' });
