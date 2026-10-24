@@ -1,0 +1,53 @@
+{
+  "$schema": "./pack.schema.json",
+  "id": "solar-b2c",
+  "nome": "Energia solar B2C",
+  "versao": "1.0.0",
+  "herda": "base",
+  "descricao": "Venda de sistemas fotovoltaicos para pessoa física: visita técnica, orçamento aprovado pela gestão, financiamento.",
+  "modelo": "b2c",
+  "textos": { "vendedor": "Consultor" },
+  "funis": [
+    {
+      "chave": "aquisicao",
+      "etapas": [
+        { "chave": "lead", "nome": "Lead qualificado", "papel": "lead", "prazoDias": 2 },
+        { "chave": "reuniao_ag", "nome": "Reunião agendada", "papel": "agendada", "prazoDias": 7 },
+        { "chave": "reuniao_ok", "nome": "Reunião realizada", "papel": "realizada", "prazoDias": 3 },
+        { "chave": "sql", "nome": "Oportunidade", "papel": "oportunidade", "prazoDias": 5 },
+        { "chave": "orc_sol", "nome": "Orçamento solicitado", "papel": "intermediaria", "prazoDias": 3 },
+        { "chave": "orc_ok", "nome": "Orçamento aprovado", "papel": "proposta", "prazoDias": 5 },
+        { "chave": "visita_ag", "nome": "Visita técnica agendada", "papel": "intermediaria", "prazoDias": 7 },
+        { "chave": "visita_ok", "nome": "Visita técnica realizada", "papel": "intermediaria", "prazoDias": 3 },
+        { "chave": "negociacao", "nome": "Negociação", "papel": "negociacao", "prazoDias": 10 },
+        { "chave": "contrato_env", "nome": "Contrato enviado", "papel": "intermediaria", "prazoDias": 5 },
+        { "chave": "ganho", "nome": "Venda", "papel": "ganho" },
+        { "chave": "perdido", "nome": "Perdido", "papel": "perdido" }
+      ]
+    }
+  ],
+  "atividades": [
+    { "chave": "visita", "nome": "Visita técnica", "papel": "visita", "unidade": "visitas" }
+  ],
+  "canais": [
+    { "chave": "meta_ads", "nome": "Meta Ads", "tipo": "pago", "pai": "pago" },
+    { "chave": "google_ads", "nome": "Google Ads", "tipo": "pago", "pai": "pago" },
+    { "chave": "pap", "nome": "Porta a porta", "tipo": "outbound" }
+  ],
+  "motivosPerda": [
+    { "chave": "financiamento", "nome": "Financiamento negado", "grupo": "credito" },
+    { "chave": "inviabilidade", "nome": "Inviabilidade técnica", "grupo": "fit" }
+  ],
+  "tiposNegocio": ["novo", "expansao", "cross_sell"],
+  "precificacao": {
+    "linhas": [
+      { "chave": "kit", "nome": "Kit fotovoltaico", "grupo": "custo_variavel", "base": "informado" },
+      { "chave": "instalacao", "nome": "Instalação", "grupo": "custo_variavel", "base": "informado" }
+    ],
+    "condicoes": [
+      { "chave": "cartao", "nome": "Cartão", "taxa": 0.12 },
+      { "chave": "financiamento", "nome": "Financiamento", "taxa": 0.03 }
+    ]
+  },
+  "cs": { "recorrente": false, "janelaIndicacaoDias": 120 }
+}

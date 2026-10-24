@@ -1,0 +1,22 @@
+name: testes
+on: [push, pull_request]
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_USER: lab, POSTGRES_PASSWORD: lab, POSTGRES_DB: lab_teste }
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U lab" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgres://lab:lab@localhost:5432/lab_teste
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run pack:validar
+      - run: npm test

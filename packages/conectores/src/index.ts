@@ -1,0 +1,11 @@
+export * from './tipos.js';
+export * from './mapa.js';
+export * from './cripto.js';
+export * from './csv.js';
+export * from './aplicador.js';
+export * from './operacao.js';
+export * from './pipeline.js';
+export * from './registro.js';
+export { conectorAmicta, comandosDoEvento, comandosDoNegocio } from './fontes/amicta.js';
+export { conectorCanonico } from './fontes/canonico.js';
+export { conectorPlanilha, traduzirLinha, TIPOS_PLANILHA } from './fontes/planilha.js';

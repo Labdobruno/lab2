@@ -1,0 +1,14 @@
+# Worker da API do LAB V2 (conta Cloudflare pessoal).
+# Segredos (nunca neste arquivo):  npx wrangler secret put DATABASE_URL
+#                                  npx wrangler secret put ADMIN_TOKEN
+#                                  npx wrangler secret put AMICTA_CHAVE / AMICTA_WEBHOOK (quando ligar a Amicta)
+name = "lab-v2-api"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+compatibility_flags = ["nodejs_compat"]
+
+[triggers]
+crons = ["*/15 * * * *"]
+
+[observability]
+enabled = true

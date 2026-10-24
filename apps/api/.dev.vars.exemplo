@@ -1,0 +1,3 @@
+# copie para .dev.vars (não vai para o git) e rode: npm run dev -w @lab/api
+DATABASE_URL=postgres://lab:lab@localhost:5432/lab_teste
+ADMIN_TOKEN=troque-por-um-token-longo-e-aleatorio

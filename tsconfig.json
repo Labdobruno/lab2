@@ -1,0 +1,23 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "types": [
+      "node",
+      "@cloudflare/workers-types"
+    ],
+    "baseUrl": ".",
+    "paths": {
+      "@lab/nucleo": [
+        "packages/nucleo/src/index.ts"
+      ],
+      "@lab/conectores": [
+        "packages/conectores/src/index.ts"
+      ]
+    }
+  },
+  "include": [
+    "packages/*/src",
+    "apps/*/src",
+    "scripts"
+  ]
+}

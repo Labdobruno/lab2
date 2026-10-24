@@ -1,0 +1,73 @@
+{
+  "$schema": "./pack.schema.json",
+  "id": "base",
+  "nome": "Base — funil borboleta",
+  "versao": "1.0.0",
+  "descricao": "Ponto de partida neutro: aquisição + pós-venda (onboarding, retenção, expansão). Todo pack herda daqui.",
+  "modelo": "misto",
+  "textos": { "receita": "Receita", "cliente": "Cliente", "vendedor": "Vendedor", "negocio": "Negócio" },
+  "calendario": { "feriados": "BR", "diasUteis": [1, 2, 3, 4, 5], "inicioCicloDia": 1, "mesInicioAno": 1, "fuso": "America/Sao_Paulo" },
+  "funis": [
+    {
+      "chave": "aquisicao", "nome": "Aquisição", "lado": "aquisicao", "principal": true,
+      "etapas": [
+        { "chave": "lead", "nome": "Lead", "papel": "lead", "prazoDias": 2 },
+        { "chave": "contato", "nome": "Em contato", "papel": "contato", "prazoDias": 5 },
+        { "chave": "agendada", "nome": "Reunião agendada", "papel": "agendada", "prazoDias": 7 },
+        { "chave": "realizada", "nome": "Reunião realizada", "papel": "realizada", "prazoDias": 3 },
+        { "chave": "proposta", "nome": "Proposta", "papel": "proposta", "prazoDias": 7 },
+        { "chave": "negociacao", "nome": "Negociação", "papel": "negociacao", "prazoDias": 10 },
+        { "chave": "ganho", "nome": "Venda", "papel": "ganho" },
+        { "chave": "perdido", "nome": "Perdido", "papel": "perdido" }
+      ]
+    },
+    {
+      "chave": "carteira", "nome": "Carteira (pós-venda)", "lado": "pos_venda",
+      "etapas": [
+        { "chave": "onboarding", "nome": "Onboarding", "papel": "onboarding", "prazoDias": 30 },
+        { "chave": "ativo", "nome": "Ativo", "papel": "ativo" },
+        { "chave": "renovacao", "nome": "Em renovação", "papel": "renovacao", "prazoDias": 30 },
+        { "chave": "expansao", "nome": "Em expansão", "papel": "expansao", "prazoDias": 30 },
+        { "chave": "churn", "nome": "Cancelou", "papel": "churn" }
+      ]
+    }
+  ],
+  "atividades": [
+    { "chave": "tentativa", "nome": "Tentativa de contato", "papel": "tentativa", "unidade": "tentativas", "metaDiaria": true },
+    { "chave": "contato", "nome": "Contato efetivo", "papel": "contato", "unidade": "contatos" },
+    { "chave": "agendamento", "nome": "Agendamento", "papel": "agendamento", "unidade": "agendamentos" },
+    { "chave": "reuniao", "nome": "Reunião realizada", "papel": "reuniao_realizada", "unidade": "reuniões" },
+    { "chave": "no_show", "nome": "Não compareceu", "papel": "no_show" },
+    { "chave": "proposta", "nome": "Proposta enviada", "papel": "proposta_enviada", "unidade": "propostas" },
+    { "chave": "follow_up", "nome": "Follow-up", "papel": "follow_up" },
+    { "chave": "reuniao_cs", "nome": "Reunião de conta", "papel": "reuniao_cs" },
+    { "chave": "indicacao_pedida", "nome": "Pedido de indicação", "papel": "indicacao_pedida" },
+    { "chave": "nota", "nome": "Nota", "papel": "nota" }
+  ],
+  "canais": [
+    { "chave": "indicacao", "nome": "Indicação", "tipo": "indicacao" },
+    { "chave": "organico", "nome": "Orgânico", "tipo": "organico" },
+    { "chave": "pago", "nome": "Mídia paga", "tipo": "pago" },
+    { "chave": "outbound", "nome": "Prospecção ativa", "tipo": "outbound" },
+    { "chave": "base", "nome": "Base de clientes", "tipo": "base", "origemDeLead": false }
+  ],
+  "motivosPerda": [
+    { "chave": "preco", "nome": "Preço", "grupo": "preco" },
+    { "chave": "concorrente", "nome": "Fechou com concorrente", "grupo": "concorrencia" },
+    { "chave": "timing", "nome": "Não é o momento", "grupo": "timing" },
+    { "chave": "sem_resposta", "nome": "Parou de responder", "grupo": "sem_resposta" },
+    { "chave": "sem_fit", "nome": "Sem perfil", "grupo": "fit" },
+    { "chave": "outro", "nome": "Outro", "grupo": "outro" }
+  ],
+  "tiposNegocio": ["novo", "expansao", "renovacao", "revenda", "cross_sell"],
+  "precificacao": {
+    "linhas": [
+      { "chave": "imposto", "nome": "Impostos sobre a venda", "grupo": "deducao", "base": "percentual_preco", "valor": 0 },
+      { "chave": "custo_direto", "nome": "Custo direto da venda", "grupo": "custo_variavel", "base": "informado" },
+      { "chave": "comissao", "nome": "Comissão", "grupo": "comissao", "base": "percentual_liquido", "valor": 0 }
+    ],
+    "condicoes": [ { "chave": "vista", "nome": "À vista", "taxa": 0 } ]
+  },
+  "cs": { "recorrente": false, "janelaRenovacaoDias": 60, "janelaIndicacaoDias": 90 },
+  "parametros": { "maturacaoCoorteDias": 30, "amostraMinima": 10, "janelaHistoricaDias": 180 }
+}

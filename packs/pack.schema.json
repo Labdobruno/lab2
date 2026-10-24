@@ -1,0 +1,457 @@
+{
+  "title": "Pack do LAB V2",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_-]*$"
+    },
+    "nome": {
+      "type": "string",
+      "minLength": 1
+    },
+    "versao": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "herda": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_-]*$"
+    },
+    "descricao": {
+      "type": "string"
+    },
+    "modelo": {
+      "type": "string",
+      "enum": [
+        "b2b",
+        "b2c",
+        "misto"
+      ]
+    },
+    "textos": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "calendario": {
+      "type": "object",
+      "properties": {
+        "feriados": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "BR"
+            },
+            {
+              "type": "string",
+              "const": "nenhum"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^\\d{2}-\\d{2}$"
+              }
+            }
+          ]
+        },
+        "diasUteis": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 6
+          }
+        },
+        "inicioCicloDia": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 28
+        },
+        "mesInicioAno": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 12
+        },
+        "fuso": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "funis": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "chave": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_-]*$"
+          },
+          "nome": {
+            "type": "string",
+            "minLength": 1
+          },
+          "lado": {
+            "type": "string",
+            "enum": [
+              "aquisicao",
+              "pos_venda"
+            ]
+          },
+          "principal": {
+            "type": "boolean"
+          },
+          "etapas": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "chave": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9][a-z0-9_-]*$"
+                },
+                "nome": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "papel": {
+                  "type": "string",
+                  "enum": [
+                    "lead",
+                    "contato",
+                    "qualificado",
+                    "agendada",
+                    "realizada",
+                    "oportunidade",
+                    "proposta",
+                    "negociacao",
+                    "ganho",
+                    "perdido",
+                    "onboarding",
+                    "ativo",
+                    "renovacao",
+                    "expansao",
+                    "churn",
+                    "intermediaria"
+                  ]
+                },
+                "prazoDias": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "descricao": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "chave",
+                "nome",
+                "papel"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "remover": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "chave"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "atividades": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "chave": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_-]*$"
+          },
+          "nome": {
+            "type": "string",
+            "minLength": 1
+          },
+          "papel": {
+            "type": "string",
+            "enum": [
+              "tentativa",
+              "contato",
+              "agendamento",
+              "reuniao_realizada",
+              "no_show",
+              "proposta_enviada",
+              "follow_up",
+              "visita",
+              "reuniao_cs",
+              "indicacao_pedida",
+              "nota",
+              "outro"
+            ]
+          },
+          "unidade": {
+            "type": "string"
+          },
+          "metaDiaria": {
+            "type": "boolean"
+          },
+          "remover": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "chave"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "canais": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "chave": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_-]*$"
+          },
+          "nome": {
+            "type": "string",
+            "minLength": 1
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "pago",
+              "organico",
+              "indicacao",
+              "outbound",
+              "parceiro",
+              "evento",
+              "base",
+              "outro"
+            ]
+          },
+          "origemDeLead": {
+            "type": "boolean"
+          },
+          "pai": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_-]*$"
+          },
+          "remover": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "chave"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "motivosPerda": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "chave": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_-]*$"
+          },
+          "nome": {
+            "type": "string",
+            "minLength": 1
+          },
+          "grupo": {
+            "type": "string",
+            "enum": [
+              "preco",
+              "credito",
+              "timing",
+              "concorrencia",
+              "fit",
+              "sem_resposta",
+              "interno",
+              "outro"
+            ]
+          },
+          "remover": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "chave"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "tiposNegocio": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "novo",
+          "expansao",
+          "renovacao",
+          "revenda",
+          "cross_sell"
+        ]
+      }
+    },
+    "precificacao": {
+      "type": "object",
+      "properties": {
+        "margemAlvo": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "margemMinima": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "descontoMaximo": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "linhas": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "chave": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9_-]*$"
+              },
+              "nome": {
+                "type": "string",
+                "minLength": 1
+              },
+              "grupo": {
+                "type": "string",
+                "enum": [
+                  "deducao",
+                  "custo_variavel",
+                  "comissao"
+                ]
+              },
+              "base": {
+                "type": "string",
+                "enum": [
+                  "percentual_preco",
+                  "percentual_liquido",
+                  "fixo",
+                  "informado"
+                ]
+              },
+              "valor": {
+                "type": "number",
+                "minimum": 0
+              },
+              "remover": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "chave"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "condicoes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "chave": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9_-]*$"
+              },
+              "nome": {
+                "type": "string",
+                "minLength": 1
+              },
+              "taxa": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "remover": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "chave"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "cs": {
+      "type": "object",
+      "properties": {
+        "recorrente": {
+          "type": "boolean"
+        },
+        "periodicidadeMeses": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991
+        },
+        "janelaRenovacaoDias": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991
+        },
+        "janelaIndicacaoDias": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "additionalProperties": false
+    },
+    "parametros": {
+      "type": "object",
+      "properties": {
+        "maturacaoCoorteDias": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991
+        },
+        "amostraMinima": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991
+        },
+        "janelaHistoricaDias": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "id",
+    "versao"
+  ],
+  "additionalProperties": false
+}
