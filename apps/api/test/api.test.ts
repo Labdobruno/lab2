@@ -13,6 +13,17 @@ it('todo pack da pasta packs/ está no catálogo do Worker', () => {
   expect(Object.keys(CATALOGO).sort()).toEqual(naPasta.sort());
 });
 
+it('a tela é pública, não carrega dados e vai com política de segurança', async () => {
+  const app = criarApp({ sql: undefined as never, env: {} });
+  const r = await app(new Request('https://lab.teste/app'));
+  expect(r.status).toBe(200);
+  expect(r.headers.get('content-security-policy')).toContain("default-src 'none'");
+  const html = await r.text();
+  expect(html).not.toMatch(/innerHTML/);
+  const js = html.match(/<script>([\s\S]*)<\/script>/)![1]!;
+  expect(() => new Function(js)).not.toThrow();
+});
+
 it('conectores não alcançam os segredos do próprio LAB', () => {
   const s = lerSegredo({ ADMIN_TOKEN: 'x', DATABASE_URL: 'y', AMICTA_CHAVE: 'amk' });
   expect(s('ADMIN_TOKEN')).toBeUndefined();

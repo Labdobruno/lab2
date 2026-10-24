@@ -1,4 +1,5 @@
 /* API do LAB V2. Rotas:
+   GET  /app                                     tela (página sem dados; pede o ADMIN_TOKEN para buscar na API)
    GET  /saude                                  público
    POST /entrada/:conector                      público, mas cada conector confere a própria assinatura/chave
    /admin/*                                     exige Authorization: Bearer <ADMIN_TOKEN>
@@ -30,6 +31,7 @@ import {
 } from '@lab/planejamento';
 import type { Sql } from 'postgres';
 import { CATALOGO } from './catalogo.js';
+import { CSP, PAGINA } from './tela.js';
 
 export interface Ambiente {
   ADMIN_TOKEN?: string;
@@ -183,6 +185,9 @@ export function criarApp(opts: { sql: Sql; env: Ambiente; fetch?: typeof fetch; 
     const url = new URL(req.url);
     const partes = url.pathname.split('/').filter(Boolean);
     try {
+      if ((partes[0] === 'app' || partes.length === 0) && partes.length <= 1 && req.method === 'GET') {
+        return new Response(PAGINA, { headers: { 'content-type': 'text/html; charset=utf-8', 'content-security-policy': CSP, 'cache-control': 'no-store', 'x-content-type-options': 'nosniff', 'referrer-policy': 'no-referrer' } });
+      }
       if (partes[0] === 'saude' && req.method === 'GET') {
         let banco = 'ok';
         try { await sql`select 1`; } catch { banco = 'indisponível'; }

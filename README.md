@@ -14,10 +14,11 @@ Central de inteligência de receita do Bruno. Cobre o funil borboleta inteiro: g
 | Banco | Modelo canônico por operação, histórico de etapas só de acréscimo, entradas brutas guardadas para sempre | `supabase/migrations/` |
 | Conectores | Webhook canônico (n8n, Make, scripts), planilha CSV e CRM Amicta v1 | `packages/conectores/src/fontes/` |
 | API | Cloudflare Worker: entrada de webhooks, importação, sincronização, saúde, cron a cada 15 min | `apps/api/` |
+| Tela (fase 4) | "O time está no ritmo?": quem está no ritmo, atenção ou atrás, com o detalhe ao tocar numa pessoa. Página única, sem dados, que lê a API com a chave de acesso | `apps/api/src/tela.ts`, `GET /app` |
 | Planejamento (fase 3) | Ciclo e calendário (feriados BR), metas só de acréscimo, build-up reverso, ritmo, contingência, plano do dia e Fechamento do dia | `packages/planejamento/`, `GET /admin/operacoes/:slug/{ciclo,buildup,ritmo,fechamento-do-dia}`, `POST …/metas` |
 | Métricas (fase 2) | Dicionário e funções puras: CPL, CAC, ROI, payback, MC, conversão por coorte (Wilson), fluxo, churn, retenção e LTV | `packages/metricas/`, `GET /admin/operacoes/:slug/metricas` |
 
-O que ainda **não** existe: telas e as fases 5 a 8 do roteiro. A ordem de construção está em [`docs/roteiro.md`](docs/roteiro.md).
+O que ainda **não** existe: as demais telas e as fases 5 a 8 do roteiro. A ordem de construção está em [`docs/roteiro.md`](docs/roteiro.md).
 
 ## Como as peças se encaixam
 
