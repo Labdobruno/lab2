@@ -15,6 +15,9 @@
       ],
       "@lab/metricas": [
         "packages/metricas/src/index.ts"
+      ],
+      "@lab/planejamento": [
+        "packages/planejamento/src/index.ts"
       ]
     }
   },

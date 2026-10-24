@@ -17,7 +17,7 @@ export async function operacaoPorSlug(sql: Sql, slug: string) {
   return op ?? null;
 }
 
-async function negocios(sql: Sql, opId: string, fuso: string, filtro: 'criados' | 'fechados', p: Periodo): Promise<NegocioLinha[]> {
+export async function negocios(sql: Sql, opId: string, fuso: string, filtro: 'criados' | 'fechados', p: Periodo): Promise<NegocioLinha[]> {
   const col = filtro === 'criados' ? sql`n.criado_em` : sql`n.fechado_em`;
   const linhas = await sql<any[]>`
     select n.id, n.tipo, c.chave as canal, n.status, e.papel as papel_atual, f.principal,

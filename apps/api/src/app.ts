@@ -13,6 +13,11 @@
      POST /admin/conectores/:id/processar       reprocessa pendentes e erros
      GET  /admin/conectores/:id/saude           execuções, entradas por status, erros e o que revisar
      GET  /admin/metricas/dicionario            definição de cada número
+     GET  /admin/operacoes/:slug/ciclo?data=    ciclo, dias úteis e metas vigentes
+     POST /admin/operacoes/:slug/metas          { cicloInicio?, metas: [{ indicador, valor, pessoaId?, nota? }] } só acrescenta
+     GET  /admin/operacoes/:slug/buildup?receita=&data=&ticket=   sugestão de metas, de receita até tentativas (não grava)
+     GET  /admin/operacoes/:slug/ritmo?data=    esperado até hoje, quem está no ritmo e quem está atrás
+     GET  /admin/operacoes/:slug/fechamento-do-dia?data=
      GET  /admin/operacoes/:slug/metricas?de=AAAA-MM-DD&ate=AAAA-MM-DD   canais, coorte, fluxo, vendas e retenção (somente leitura) */
 import { resolverPack } from '@lab/nucleo';
 import {
@@ -20,6 +25,9 @@ import {
   receberWebhook, sincronizar, CONECTORES, type Dependencias, type LinhaConector,
 } from '@lab/conectores';
 import { DICIONARIO, operacaoPorSlug, relatorio, validarPeriodo } from '@lab/metricas';
+import {
+  acrescentarMetas, cicloDaOperacao, dataValida, fechamento, hojeNoFuso, metasVigentes, operacao as operacaoPlanejamento, ritmo, sugestaoBuildup,
+} from '@lab/planejamento';
 import type { Sql } from 'postgres';
 import { CATALOGO } from './catalogo.js';
 
@@ -77,6 +85,30 @@ export function criarApp(opts: { sql: Sql; env: Ambiente; fetch?: typeof fetch; 
           const msg = (e as Error).message;
           return erro(/duplicate key|unique/i.test(msg) ? `já existe uma operação "${b.slug}"` : msg, /unique/i.test(msg) ? 409 : 400);
         }
+      }
+      if (id && ['ciclo', 'metas', 'buildup', 'ritmo', 'fechamento-do-dia'].includes(acao ?? '')) {
+        const op = await operacaoPlanejamento(sql, id);
+        if (!op) return erro('operação não encontrada', 404);
+        const data = url.searchParams.get('data') ?? hojeNoFuso(op.fuso, (opts.agora ?? (() => new Date()))());
+        if (!dataValida(data)) return erro('data deve ser AAAA-MM-DD');
+        const ciclo = cicloDaOperacao(op, data);
+        if (acao === 'ciclo' && m === 'GET') return json({ ciclo: { inicio: ciclo.inicio, fim: ciclo.fim, diasUteis: ciclo.uteis.length, dias: ciclo.uteis }, metas: await metasVigentes(sql, op.id, ciclo.inicio) });
+        if (acao === 'metas' && m === 'POST') {
+          const b = await corpoJSON(req);
+          if (!Array.isArray(b.metas)) return erro('informe metas: [{ indicador, valor, pessoaId? }]');
+          const inicio = typeof b.cicloInicio === 'string' ? b.cicloInicio : ciclo.inicio;
+          if (!dataValida(inicio)) return erro('cicloInicio deve ser AAAA-MM-DD');
+          try { return json({ cicloInicio: inicio, acrescentadas: await acrescentarMetas(sql, op.id, inicio, b.metas as never) }, 201); }
+          catch (e) { return erro((e as Error).message); }
+        }
+        if (acao === 'buildup' && m === 'GET') {
+          const receita = Number(url.searchParams.get('receita'));
+          if (!(receita > 0)) return erro('informe receita (> 0)');
+          const ticket = url.searchParams.get('ticket');
+          return json(await sugestaoBuildup(sql, op, data, receita, ticket ? { ticketMedio: Number(ticket) } : {}));
+        }
+        if (acao === 'ritmo' && m === 'GET') return json(await ritmo(sql, op, data));
+        if (acao === 'fechamento-do-dia' && m === 'GET') return json(await fechamento(sql, op, data));
       }
       if (id && acao === 'metricas' && m === 'GET') {
         const op = await operacaoPorSlug(sql, id);
