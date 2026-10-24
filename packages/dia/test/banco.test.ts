@@ -3,7 +3,7 @@ import type postgres from 'postgres';
 import { criarOperacao } from '@lab/conectores';
 import { acrescentarMetas, operacao, cicloDaOperacao } from '@lab/planejamento';
 import {
-  ausencias, contextoDoDia, dadosDoDia, definirCapacidade, desfazerLancamento, equipeDoDia, ErroDoDia, fotosDoDia, gravarFoto, justificar, lancamentos, lancar,
+  acaoFechamento, ausencias, cicloDoDia, contextoDoDia, gerarFechamento, lerFechamento, listaFechamentos, statusRotina, tiqueFechamento, dadosDoDia, definirCapacidade, desfazerLancamento, equipeDoDia, ErroDoDia, fotosDoDia, gravarFoto, justificar, lancamentos, lancar,
   marcarAusencia, marcarFeito, metasDiarias, metasDiariasDaPessoa, montarPessoa,
 } from '../src/index.js';
 import { bancoLimpo, catalogo, semBanco } from '../../conectores/test/ajuda.js';
@@ -173,5 +173,120 @@ describe.skipIf(semBanco)('plano do dia no banco', () => {
     expect(D.cap).toMatchObject({ v: 40, fonte: 'apontada', obs: { v: 10 } });
     expect(D.viab).not.toBeNull();
     await definirCapacidade(sql, op, sara, null);
+  });
+});
+
+describe.skipIf(semBanco)('vamos bater a meta? (ciclo no banco)', () => {
+  let sql: postgres.Sql, opId: string, sara: string, caio: string;
+  beforeAll(async () => {
+    sql = await bancoLimpo();
+    await criarOperacao(sql, { slug: 'c', nome: 'C', packId: 'base' }, catalogo());
+    const op = (await operacao(sql, 'c'))!; opId = op.id;
+    const ps = await sql<{ id: string; nome: string }[]>`insert into lab.pessoa (operacao_id, nome, funcao) values (${opId}, 'Sara', 'sdr'), (${opId}, 'Caio', 'closer') returning id, nome`;
+    sara = ps.find(p => p.nome === 'Sara')!.id; caio = ps.find(p => p.nome === 'Caio')!.id;
+    await acrescentarMetas(sql, opId, '2026-10-01', [{ indicador: 'receita', valor: 200000 }, { indicador: 'vendas', valor: 10 }, { indicador: 'tentativa', pessoaId: sara, valor: 220 }, { indicador: 'agendamento', pessoaId: sara, valor: 22 }]);
+    const [funil] = await sql<{ id: string }[]>`select id from lab.funil where operacao_id = ${opId} and principal`;
+    const E = Object.fromEntries((await sql<{ id: string; chave: string }[]>`select id, chave from lab.etapa where operacao_id = ${opId}`).map(e => [e.chave, e.id]));
+    const tT = (await sql<{ id: string }[]>`select id from lab.tipo_atividade where operacao_id = ${opId} and papel = 'tentativa' limit 1`)[0]!.id;
+    for (const d of ['01', '02', '05', '06', '07', '08', '09', '13']) await sql`insert into lab.atividade (operacao_id, tipo_id, pessoa_id, em, quantidade) values (${opId}, ${tT}, ${sara}, ${`2026-10-${d}T13:00:00Z`}, 10)`;
+    /* histórico: 20 negócios criados em julho, 12 chegaram à proposta, 6 ganhos (R$ 20 mil cada, 30 dias de ciclo); 5 vendas no ciclo; pipeline aberto */
+    const neg = async (criado: string, etapa: string, status: string, fechado: string | null, valor: number | null, dono: string | null) => (await sql<{ id: string }[]>`insert into lab.negocio (operacao_id, funil_id, dono_id, etapa_id, etapa_desde, criado_em, status, valor_fechado, valor_estimado, fechado_em)
+      values (${opId}, ${funil!.id}, ${dono}, ${E[etapa]!}, ${criado}, ${criado}, ${status}, ${valor}, ${valor ?? 25000}, ${fechado}) returning id`)[0]!.id;
+    const T = async (id: string, de: string | null, para: string, em: string) => { await sql`insert into lab.negocio_transicao (operacao_id, negocio_id, de_etapa_id, para_etapa_id, em, origem) values (${opId}, ${id}, ${de ? E[de]! : null}, ${E[para]!}, ${em}, 'evento')`; };
+    for (let i = 0; i < 20; i++) { const ganho = i < 6, prop = i < 12, id = await neg('2026-07-01T12:00:00Z', ganho ? 'ganho' : prop ? 'perdido' : 'perdido', ganho ? 'ganho' : 'perdido', ganho ? '2026-07-31T12:00:00Z' : '2026-07-20T12:00:00Z', ganho ? 20000 : null, caio);
+      await T(id, null, 'lead', '2026-07-01T12:00:00Z'); await T(id, 'lead', 'agendada', '2026-07-03T12:00:00Z'); if (prop) { await T(id, 'agendada', 'realizada', '2026-07-05T12:00:00Z'); await T(id, 'realizada', 'proposta', '2026-07-10T12:00:00Z'); } if (ganho) await T(id, 'proposta', 'ganho', '2026-07-31T12:00:00Z'); }
+    for (let i = 0; i < 5; i++) { const id = await neg('2026-09-10T12:00:00Z', 'ganho', 'ganho', `2026-10-0${i + 2}T15:00:00Z`, 20000, caio); await T(id, null, 'lead', '2026-09-10T12:00:00Z'); await T(id, 'lead', 'proposta', '2026-09-20T12:00:00Z'); await T(id, 'proposta', 'ganho', `2026-10-0${i + 2}T15:00:00Z`); }
+    for (let i = 0; i < 4; i++) { const id = await neg('2026-10-05T12:00:00Z', 'proposta', 'aberto', null, null, caio); await T(id, null, 'lead', '2026-10-05T12:00:00Z'); await T(id, 'lead', 'proposta', '2026-10-08T12:00:00Z'); }
+    const grande = await neg('2026-10-06T12:00:00Z', 'proposta', 'aberto', null, null, caio); await sql`update lab.negocio set valor_estimado = 1000000 where id = ${grande}`; await T(grande, null, 'lead', '2026-10-06T12:00:00Z'); await T(grande, 'lead', 'proposta', '2026-10-08T12:00:00Z');
+  });
+  afterAll(async () => { await sql?.end(); });
+
+  it('projeção, forecast com fora da curva, sinais e contingência', async () => {
+    const op = (await operacao(sql, 'c'))!;
+    const C = await cicloDoDia(sql, op, '2026-10-14', 'manha', new Date('2026-10-14T11:00:00Z'));
+    expect(C.ciclo).toMatchObject({ du: 21, dd: 8, rest: 13 });            // manhã: hoje conta 0
+    expect(C.metas).toMatchObject({ receita: 200000, vendas: 10, tentativa: 220, agendamento: 22 });
+    expect(C.realizado).toMatchObject({ vendas: 5, receita: 100000, tentativa: 80 });
+    expect(C.ticket).toMatchObject({ v: 20000 });
+    expect(C.forecast.limite).toBe(100000); expect(C.forecast.fora).toHaveLength(1); expect(C.forecast.fora[0]!.valor).toBe(1000000);
+    const prop = C.forecast.et.find(e => e.chave === 'proposta')!;
+    expect(prop.n).toBe(17); expect(prop.g).toBe(11); expect(prop.abertos).toBe(5); expect(prop.foraN).toBe(1);   // 12 de julho + 5 do ciclo passaram pela proposta; 6 + 5 ganhos
+    expect(C.hist.leadVenda).toBeCloseTo(11 / 25); expect(C.hist.leadVendaN).toBe(25);   // coorte: criados até 30 dias atrás (julho + setembro) expect(C.hist.cicloMediano).toBeGreaterThan(0);
+    expect(C.proj.vendas.real).toBe(5); expect(C.proj.vendas.ritmo).toBeCloseTo(5 + (5 / 8) * 13); expect(C.proj.vendas.hist).toBeGreaterThan(5);
+    expect(C.proj.prob).not.toBeNull(); expect(C.pergunta.resposta).not.toBe('sem_dado');
+    const lt = C.linhas.find(l => l.ind === 'tentativa')!; expect(lt.esp).toBeCloseTo(220 * 8 / 21); expect(lt.real).toBe(80); expect(lt.status).toBe('atencao');   // 95% do esperado
+    expect(C.sinais.some(s => s.origem === 'trajetoria' && s.ind === 'tentativa')).toBe(false);                                                             // acima de 85%: sem sinal
+    expect(C.sinais.some(s => s.origem === 'dados' && /Reuniões agendadas/.test(s.oque))).toBe(true);                                                        // meta sem registro = sem dado, não zero
+    expect(C.contingencia.receita).toMatchObject({ meta: 200000, real: 100000, diasRest: 14 }); expect(C.contingencia.receita.razaoEsp).toBeCloseTo(100000 / (200000 * 8 / 21));
+    expect(C.contingencia.trajetoria.rows).toHaveLength(21); expect(C.contingencia.trajetoria.antes).toBe(100000);
+    const pS = C.contingencia.pessoas.find(p => p.n === 'Sara')!; expect(pS.etapas.find(e => e.k === 'tentativa')!.falta).toBe(140); expect(pS.ativ!.k).toBe('tentativa');
+    expect(C.contingencia.pessoas.find(p => p.n === 'Caio')!.pipe).toBeGreaterThan(0);
+    expect(C.pessoas.map(p => p.nome).sort()).toEqual(['Caio', 'Sara']);
+    const fim = await cicloDoDia(sql, op, '2026-10-14', 'fim', new Date('2026-10-14T20:00:00Z'));
+    expect(fim.ciclo.dd).toBe(9);
+  });
+});
+
+describe.skipIf(semBanco)('fechamento do dia no banco', () => {
+  let sql: postgres.Sql, opId: string, sara: string;
+  const AGORA = (d: number, h: number, m = 0) => new Date(Date.UTC(2026, 9, d, h + 3, m));   // horário de São Paulo (UTC−3)
+  beforeAll(async () => {
+    sql = await bancoLimpo();
+    await criarOperacao(sql, { slug: 'f', nome: 'F', packId: 'base' }, catalogo());
+    const op = (await operacao(sql, 'f'))!; opId = op.id;
+    const [p] = await sql<{ id: string }[]>`insert into lab.pessoa (operacao_id, nome, funcao) values (${opId}, 'Sara', 'sdr') returning id`; sara = p!.id;
+    await acrescentarMetas(sql, opId, '2026-10-01', [{ indicador: 'receita', valor: 100000 }, { indicador: 'vendas', valor: 5 }, { indicador: 'tentativa', pessoaId: sara, valor: 220 }]);
+    const tT = (await sql<{ id: string }[]>`select id from lab.tipo_atividade where operacao_id = ${opId} and papel = 'tentativa' limit 1`)[0]!.id;
+    for (const d of ['01', '02', '05', '06', '07', '08', '09', '13', '14', '15', '16', '19', '20', '21', '22']) await sql`insert into lab.atividade (operacao_id, tipo_id, pessoa_id, em, quantidade) values (${opId}, ${tT}, ${sara}, ${`2026-10-${d}T13:00:00Z`}, 6)`;
+    await sql`insert into lab.atividade (operacao_id, tipo_id, pessoa_id, em, quantidade) values (${opId}, ${tT}, ${sara}, '2026-10-23T13:00:00Z', 3)`;
+  });
+  afterAll(async () => { await sql?.end(); });
+
+  it('tique: 17:15 nada; 17:30 gera e grava; 17:45 nada; gerar de novo = sem mudança; 23:30 complementa uma vez; sábado sem expediente', async () => {
+    const op = (await operacao(sql, 'f'))!;
+    expect((await tiqueFechamento(sql, op, AGORA(23, 17, 15))).status).toBe('nada');
+    const g = await tiqueFechamento(sql, op, AGORA(23, 17, 30));
+    expect(g).toMatchObject({ status: 'ok', data: '2026-10-23' });
+    const R = (await lerFechamento(sql, op, '2026-10-23'))!;
+    expect(R.integro).toBe(true); expect(R.original.resumo.status).toBeDefined(); expect(R.original.ref.hash).toBe(R.assinatura);
+    const cc = R.original.comparacoes.find((c: any) => c.k === 'tentativa' && c.periodo === 'dia'); expect(cc.realizado).toBe(3); expect(cc.previsto).toBeGreaterThan(3);
+    expect(R.original.pessoas[0]).toMatchObject({ n: 'Sara', sit: 'falta_execucao' });
+    expect(R.original.limitacoes.some((l: any) => /Tarefas não está disponível/.test(l.txt))).toBe(true);
+    expect(R.original.metas[0].obj).toMatch(/Receita de ciclo/);
+    expect((await tiqueFechamento(sql, op, AGORA(23, 17, 45))).status).toBe('nada');
+    expect((await gerarFechamento(sql, op, AGORA(23, 18, 0), 'manual', 'bruno')).status).toBe('sem_mudanca');
+    expect((await tiqueFechamento(sql, op, AGORA(23, 23, 30))).status).toBe('sem_mudanca');
+    expect((await tiqueFechamento(sql, op, AGORA(23, 23, 45))).status).toBe('nada');
+    const ex = await sql`select origem, status from lab.dia_execucao where operacao_id = ${opId} order by id`;
+    expect(ex.map(e => e.origem + ':' + e.status)).toEqual(['agendado:ok', 'manual:sem_mudanca', 'complemento:sem_mudanca']);
+    expect((await tiqueFechamento(sql, op, AGORA(24, 17, 30))).status).toBe('sem_expediente');
+    expect((await tiqueFechamento(sql, op, AGORA(24, 17, 45))).status).toBe('nada');
+  });
+  it('registro atrasado vira complemento com o que mudou; o original não muda; decisão do gestor fica e entra na recorrência', async () => {
+    const op = (await operacao(sql, 'f'))!;
+    const tT = (await sql<{ id: string }[]>`select id from lab.tipo_atividade where operacao_id = ${opId} and papel = 'tentativa' limit 1`)[0]!.id;
+    await sql`insert into lab.atividade (operacao_id, tipo_id, pessoa_id, em, quantidade) values (${opId}, ${tT}, ${sara}, '2026-10-23T19:00:00Z', 8)`;
+    expect((await gerarFechamento(sql, op, AGORA(23, 23, 40), 'complemento')).status).toBe('complemento');
+    const R = (await lerFechamento(sql, op, '2026-10-23'))!;
+    expect(R.complementos).toHaveLength(1); expect(R.complementos[0].mudou.some((m: string) => /Tentativas de contato da equipe hoje: 3\//.test(m) && /→ 11\//.test(m))).toBe(true);
+    expect(R.original.comparacoes.find((c: any) => c.k === 'tentativa').realizado).toBe(3); expect(R.atual.comparacoes.find((c: any) => c.k === 'tentativa').realizado).toBe(11);
+    await expect(sql`update lab.dia_fechamento set original = '{}'::jsonb where operacao_id = ${opId}`).rejects.toThrow(/nunca muda/);
+    await expect(sql`delete from lab.dia_fechamento where operacao_id = ${opId}`).rejects.toThrow(/só de acréscimo/);
+    expect((await falha(acaoFechamento(sql, op, { data: '2026-10-23', chave: 'dia:tentativa:Sara', estado: 'decidida', texto: 'x' })))!.message).toMatch(/descreva/);
+    const a = await acaoFechamento(sql, op, { data: '2026-10-23', chave: 'dia:tentativa:Sara', estado: 'decidida', texto: 'bloco de ligações às 9h', por: 'bruno' });
+    expect(a.acao).toMatchObject({ estado: 'decidida', por: 'bruno' }); expect(a.acao.hist).toHaveLength(1);
+    /* segunda-feira seguinte: o mesmo desvio cita a decisão de 23/10 */
+    const g2 = await gerarFechamento(sql, op, AGORA(26, 17, 30), 'agendado');
+    expect(g2.status).toBe('ok');
+    const R2 = (await lerFechamento(sql, op, '2026-10-26'))!, al = R2.atual.alertas.find((x: any) => x.chave === 'dia:tentativa:Sara');
+    expect(al.recorrencia.seguidos).toBe(1); expect(al.contexto).toMatch(/decisão registrada em 23\/10 e o desvio continua/);
+    expect((await listaFechamentos(sql, op, '2026-10-01', '2026-10-31')).map(x => x.data)).toEqual(['2026-10-26', '2026-10-23']);
+    const st = await statusRotina(sql, op, AGORA(27, 18, 0)); expect(st).toMatchObject({ hoje: '2026-10-27', existe: false, atrasado: true }); expect(st.ultima.status).toBe('ok');
+  });
+  it('duas execuções ao mesmo tempo: uma gera, a outra é ignorada', async () => {
+    const op = (await operacao(sql, 'f'))!;
+    const [a, b] = await Promise.all([gerarFechamento(sql, op, AGORA(27, 17, 30), 'agendado'), gerarFechamento(sql, op, AGORA(27, 17, 30), 'manual', 'bruno')]);
+    expect([a.status, b.status].sort()).toEqual(['ignorado', 'ok']);
+    expect((await sql`select count(*)::int as n from lab.dia_fechamento where operacao_id = ${opId} and data = '2026-10-27'`)[0]!.n).toBe(1);
   });
 });
