@@ -22,7 +22,7 @@ export async function negocios(sql: Sql, opId: string, fuso: string, filtro: 'cr
   const linhas = await sql<any[]>`
     select n.id, n.tipo, c.chave as canal, n.status, e.papel as papel_atual, f.principal,
            n.valor_fechado, n.criado_em, n.fechado_em,
-           coalesce((select array_agg(distinct e2.papel) from lab.negocio_transicao t join lab.etapa e2 on e2.id = t.para_etapa_id where t.negocio_id = n.id), '{}') as alcancados
+           coalesce((select jsonb_agg(distinct e2.papel) from lab.negocio_transicao t join lab.etapa e2 on e2.id = t.para_etapa_id where t.negocio_id = n.id), '[]'::jsonb) as alcancados
     from lab.negocio n join lab.etapa e on e.id = n.etapa_id join lab.funil f on f.id = n.funil_id left join lab.canal c on c.id = n.canal_id
     where n.operacao_id = ${opId} and (${col} at time zone ${fuso})::date >= ${p.de}::date and (${col} at time zone ${fuso})::date < ${p.ate}::date
       ${filtro === 'fechados' ? sql`and n.status <> 'aberto'` : sql``}`;

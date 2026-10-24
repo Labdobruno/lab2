@@ -30,7 +30,7 @@ button{cursor:pointer}button.primario{background:var(--foco);border-color:var(--
 .chip{display:inline-block;border-radius:999px;padding:2px 10px;font-size:.85rem;font-weight:600;white-space:nowrap}
 .no_ritmo{background:var(--ok-f);color:var(--ok)}.atencao{background:var(--at-f);color:var(--at)}.atras{background:var(--ruim-f);color:var(--ruim)}.sem{background:var(--linha);color:var(--suave)}
 table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:8px 4px;border-bottom:1px solid var(--linha);font-size:.95rem}
-.erro{color:var(--ruim);font-weight:600}.ok{color:var(--ok);font-weight:600}.abas{display:flex;gap:8px;margin:0 0 4px;flex-wrap:wrap}.passo{display:flex;gap:10px;align-items:center;padding:6px 0}.num{display:inline-flex;width:28px;height:28px;border-radius:50%;align-items:center;justify-content:center;font-weight:700;border:2px solid var(--linha);flex:none}.num.feito{background:var(--ok-f);border-color:var(--ok);color:var(--ok)}.num.agora{border-color:var(--foco);color:var(--foco)}.cenarios{display:grid;gap:8px}.mini{font-size:.9rem}.abas button[aria-current=page]{border-color:var(--foco);font-weight:700}form.linha{display:flex;gap:8px;flex-wrap:wrap;align-items:end}label{display:block;font-size:.85rem;color:var(--suave)}
+.erro{color:var(--ruim);font-weight:600}.ok{color:var(--ok);font-weight:600}.abas{display:flex;gap:8px;margin:0 0 4px;flex-wrap:wrap}.passo{display:flex;gap:10px;align-items:center;padding:6px 0}.num{display:inline-flex;width:28px;height:28px;border-radius:50%;align-items:center;justify-content:center;font-weight:700;border:2px solid var(--linha);flex:none}.num.feito{background:var(--ok-f);border-color:var(--ok);color:var(--ok)}.num.agora{border-color:var(--foco);color:var(--foco)}.cenarios{display:grid;gap:8px}.mini{font-size:.9rem}details{margin:8px 0}summary{cursor:pointer;min-height:44px;display:flex;align-items:center}textarea,.largo{width:100%;font:inherit;color:inherit;background:var(--cartao);border:1px solid var(--linha);border-radius:8px;padding:10px}.valor{font-size:1.5rem;font-weight:700}ul.ev{margin:6px 0;padding-left:18px}.alta{background:var(--ruim-f);color:var(--ruim)}.media{background:var(--at-f);color:var(--at)}.baixa{background:var(--linha);color:var(--suave)}.abas button[aria-current=page]{border-color:var(--foco);font-weight:700}form.linha{display:flex;gap:8px;flex-wrap:wrap;align-items:end}label{display:block;font-size:.85rem;color:var(--suave)}
 </style>
 </head>
 <body>
@@ -97,7 +97,7 @@ function controles(){
 }
 function abas(){
   function b(id,t){var x=el('button',{type:'button',texto:t,onclick:function(){estado.aba=id;estado.pessoa=null;desenhar()}});if(estado.aba===id)x.setAttribute('aria-current','page');return x}
-  return el('div',{class:'abas'},[b('ritmo','Ritmo'),b('equipe','Equipe e metas'),b('quarter','Quarter'),b('fechamento','Fechamento')]);
+  return el('div',{class:'abas'},[b('ritmo','Ritmo'),b('equipe','Equipe e metas'),b('quarter','Quarter'),b('fechamento','Fechamento'),b('achados','Achados'),b('dados','Dados')]);
 }
 function agrupar(linhas){
   var por={};
@@ -109,6 +109,8 @@ async function desenhar(){
   if(estado.aba==='equipe')return telaEquipe();
   if(estado.aba==='quarter')return telaQuarter();
   if(estado.aba==='fechamento')return telaFechamento();
+  if(estado.aba==='achados')return telaAchados();
+  if(estado.aba==='dados')return telaDados();
   app.appendChild(el('p',{class:'suave',texto:'Carregando…'}));
   var q=estado.data?('?data='+encodeURIComponent(estado.data)):'';
   var r;
@@ -319,6 +321,96 @@ async function telaFechamento(msg,ok){
     el('form',{onsubmit:async function(e){e.preventDefault();try{await api(base+'/aprendizados',{tipo:tipo.value,texto:txt.value,cicloInicio:ci.ciclo.inicio});telaFechamento('Registrado.',true)}catch(x){telaFechamento(x.message)}}},
       [el('p',{},[el('label',{for:'at',texto:'O que é'}),tipo]),el('p',{},[el('label',{for:'ax',texto:'O que aprendeu ou decidiu'}),txt]),el('button',{class:'primario',type:'submit',texto:'Registrar'})]),
     el('p',{class:'suave mini',texto:'Só acrescenta: o que foi escrito fica guardado como memória.'})].concat(ap.map(function(a){return el('p',{},[el('span',{class:'chip sem',texto:TIPOS_A[a.tipo]||a.tipo}),' ',a.texto,a.cicloInicio?el('span',{class:'suave mini',texto:' · ciclo de '+data(a.cicloInicio)}):null])}))));
+}
+function fmtVal(v,u){if(v==null)return 'sem dado';if(u==='%')return (Math.round(v*1000)/10)+'%';if(u==='R$')return reais(v);return numero(v)}
+function evidencias(lista){return el('ul',{class:'ev mini'},lista.map(function(e){return el('li',{texto:e.nome+': '+fmtVal(e.valor,e.unidade)})}))}
+async function telaAchados(msg,ok){
+  limpar();
+  var base='/admin/operacoes/'+encodeURIComponent(estado.slug),a,ex,de;
+  try{a=await api(base+'/achados'+qs());ex=await api(base+'/experimentos'+qs());de=await api(base+'/decisoes')}
+  catch(e){if(e.message==='401')return telaEntrada('Acesso recusado. Entre de novo.');app.appendChild(el('p',{class:'erro',texto:'Não consegui carregar: '+e.message}));return}
+  app.appendChild(abas());
+  app.appendChild(el('h1',{texto:'O que merece sua atenção?'}));
+  app.appendChild(el('p',{class:'suave',texto:'Mostro no máximo '+a.orcamento+' coisas por vez, as que têm mais dinheiro em jogo.'}));
+  app.appendChild(controles());
+  if(msg)app.appendChild(el('p',{class:ok?'ok':'erro',texto:msg}));
+  if(a.errosDeFormula.length)app.appendChild(el('p',{class:'erro',texto:'Há hipóteses com fórmula quebrada: '+a.errosDeFormula.map(function(x){return x.chave}).join(', ')}));
+  if(!a.achados.length)app.appendChild(el('div',{class:'cartao'},[el('p',{texto:'Nada pede atenção agora.'}),el('p',{class:'suave',texto:a.semDados.length?('Mas '+a.semDados.length+' hipótese(s) não puderam ser avaliadas por falta de dados (veja abaixo e a aba Dados).'):'As hipóteses da biblioteca foram avaliadas e nenhuma disparou.'})]));
+  a.achados.forEach(function(x){app.appendChild(cartaoAchado(x,base))});
+  if(a.emEspera.length)app.appendChild(el('details',{class:'cartao'},[el('summary',{texto:'Em espera ('+a.emEspera.length+'): ficam para depois que você resolver os de cima'})].concat(a.emEspera.map(function(x){return el('p',{},[el('strong',{texto:x.titulo}),el('span',{class:'suave mini',texto:' · '+(x.impacto==null?'impacto não calculável':reais(x.impacto)+' em jogo')})])}))));
+  if(a.semDados.length)app.appendChild(el('details',{class:'cartao'},[el('summary',{texto:'Sem dados para avaliar ('+a.semDados.length+')'})].concat(a.semDados.map(function(x){return el('p',{},[el('strong',{texto:x.titulo}),el('span',{class:'suave mini',texto:' · falta: '+x.faltam.join(', ')})])}))));
+  /* experimentos */
+  app.appendChild(el('div',{class:'cartao'},[el('h2',{texto:'Experimentos'}),ex.length?null:el('p',{class:'suave',texto:'Nenhum ainda. Comece um a partir de um achado.'})].concat(ex.map(function(e){
+    var linha=[el('strong',{texto:e.titulo}),el('p',{class:'mini',texto:e.nome+': partiu de '+fmtVal(e.baseline,e.unidade)+(e.status==='rodando'?(', está em '+fmtVal(e.atual,e.unidade)):(', terminou em '+fmtVal(e.resultado,e.unidade)))+' · alvo '+fmtVal(e.alvo,e.unidade)}),
+      el('span',{class:'chip '+(e.status==='rodando'?'atencao':e.status==='concluido'?'no_ritmo':'sem'),texto:e.status==='rodando'?'Rodando':e.status==='concluido'?'Concluído':'Descartado'})];
+    if(e.status==='rodando'){
+      linha.push(' ');linha.push(el('button',{type:'button',class:'mini',texto:'Concluir e medir',onclick:async function(){if(!confirm('Medir agora e encerrar? Isso vai para a memória e não muda mais.'))return;try{var r=await api(base+'/experimentos/'+e.id+'/concluir'+qs(),{});telaAchados(r.atingiu?'Alvo atingido. Registrado na memória.':'Alvo não atingido. Registrado na memória.',true)}catch(x){telaAchados(x.message)}}}));
+      linha.push(' ');linha.push(el('button',{type:'button',class:'mini',texto:'Descartar',onclick:async function(){if(!confirm('Descartar o experimento?'))return;try{await api(base+'/experimentos/'+e.id+'/concluir'+qs(),{descartar:true});telaAchados('Experimento descartado.',true)}catch(x){telaAchados(x.message)}}}));
+    }
+    return el('div',{class:'passo',style:'display:block'},linha);
+  }))));
+  /* decisões */
+  app.appendChild(el('details',{class:'cartao'},[el('summary',{texto:'Decisões registradas ('+de.length+')'})].concat(de.map(function(d){return el('p',{},[el('strong',{texto:d.pergunta}),el('br'),'Decidido: '+d.escolha+(d.criterioSucesso?' · sucesso se: '+d.criterioSucesso:'')+(d.revisarEm?' · revisar em '+data(d.revisarEm):'')])}))));
+}
+function cartaoAchado(x,base){
+  var caixa=el('div',{});
+  var cart=el('div',{class:'cartao'},[
+    el('span',{class:'chip '+x.severidade,texto:x.severidade==='alta'?'Alta':x.severidade==='media'?'Média':'Baixa'}),
+    el('h2',{texto:x.titulo}),
+    x.impacto==null?el('p',{class:'suave',texto:'Impacto em R$ não calculável com os dados de hoje.'}):el('div',{},[el('div',{class:'valor',texto:reais(x.impacto)}),el('p',{class:'suave mini',texto:'em jogo'})]),
+    el('p',{},[el('strong',{texto:'O que fazer: '}),x.acao]),
+    el('details',{},[el('summary',{texto:'Os números por trás'}),evidencias(x.evidencias)]),
+    el('div',{class:'barra'},[
+      el('button',{type:'button',texto:'Decidir',onclick:function(){formDecisao(x,base,caixa)}}),
+      el('button',{type:'button',texto:'Testar com experimento',onclick:function(){formExperimento(x,base,caixa)}})]),
+    caixa]);
+  return cart;
+}
+function formDecisao(x,base,caixa){
+  while(caixa.firstChild)caixa.removeChild(caixa.firstChild);
+  var per=el('input',{class:'largo',type:'text',maxlength:'300',value:x.titulo+': o que vamos fazer?'});
+  var op=el('textarea',{rows:'3',placeholder:'Uma opção por linha'});
+  var esc=el('input',{class:'largo',type:'text',maxlength:'500'});
+  var por=el('textarea',{rows:'2'});
+  var cri=el('input',{class:'largo',type:'text',maxlength:'1000',placeholder:'Ex.: desconto médio abaixo de 10%'});
+  var rev=el('input',{type:'date'});
+  caixa.appendChild(el('form',{onsubmit:async function(e){e.preventDefault();
+    try{await api(base+'/decisoes',{hipoteseId:x.chave,pergunta:per.value,opcoes:op.value.split('\\n').map(function(t){return t.trim()}).filter(Boolean),escolha:esc.value,porque:por.value,criterioSucesso:cri.value,revisarEm:rev.value||null,contexto:{achado:x.titulo,impacto:x.impacto,evidencias:x.evidencias}});telaAchados('Decisão registrada.',true)}catch(err){telaAchados(err.message)}}},[
+    el('h3',{texto:'Canvas de decisão'}),
+    el('p',{},[el('label',{texto:'A pergunta'}),per]),el('p',{},[el('label',{texto:'Opções que você considerou'}),op]),
+    el('p',{},[el('label',{texto:'O que você escolheu'}),esc]),el('p',{},[el('label',{texto:'Por quê'}),por]),
+    el('p',{},[el('label',{texto:'Como saber que deu certo'}),cri]),el('p',{},[el('label',{texto:'Revisar em'}),rev]),
+    el('button',{class:'primario',type:'submit',texto:'Registrar decisão'})]));
+}
+function formExperimento(x,base,caixa){
+  while(caixa.firstChild)caixa.removeChild(caixa.firstChild);
+  var tit=el('input',{class:'largo',type:'text',maxlength:'200',value:'Resolver: '+x.titulo});
+  var met=el('select',{},x.evidencias.map(function(e){return el('option',{value:e.variavel,texto:e.nome+' (hoje: '+fmtVal(e.valor,e.unidade)+')'})}));
+  var alvo=el('input',{type:'number',step:'any',inputmode:'decimal'});
+  var dica=el('p',{class:'suave mini'});
+  function atualizar(){var e=x.evidencias.filter(function(z){return z.variavel===met.value})[0];dica.textContent=e.unidade==='%'?'Digite o alvo em %, por exemplo 10 para 10%.':e.unidade==='R$'?'Digite o alvo em reais.':'Digite o alvo como número.'}
+  met.addEventListener('change',atualizar);atualizar();
+  var fim=el('input',{type:'date'});
+  caixa.appendChild(el('form',{onsubmit:async function(e){e.preventDefault();
+    var ev=x.evidencias.filter(function(z){return z.variavel===met.value})[0];var v=Number(alvo.value);if(alvo.value===''||!isFinite(v))return telaAchados('Informe o alvo.');
+    try{await api(base+'/experimentos'+qs(),{titulo:tit.value,metrica:met.value,alvo:ev.unidade==='%'?v/100:v,fimPrevisto:fim.value||null,hipoteseId:x.chave});telaAchados('Experimento iniciado.',true)}catch(err){telaAchados(err.message)}}},[
+    el('h3',{texto:'Novo experimento'}),el('p',{},[el('label',{texto:'O que vai testar'}),tit]),
+    el('p',{},[el('label',{texto:'Qual número deve mudar'}),met]),el('p',{},[el('label',{texto:'Alvo'}),alvo]),dica,
+    el('p',{},[el('label',{texto:'Terminar até'}),fim]),el('button',{class:'primario',type:'submit',texto:'Começar experimento'})]));
+}
+async function telaDados(){
+  limpar();
+  var base='/admin/operacoes/'+encodeURIComponent(estado.slug),q;
+  try{q=await api(base+'/qualidade'+qs())}catch(e){if(e.message==='401')return telaEntrada('Acesso recusado. Entre de novo.');app.appendChild(el('p',{class:'erro',texto:'Não consegui carregar: '+e.message}));return}
+  app.appendChild(abas());
+  app.appendChild(el('h1',{texto:'Os dados estão confiáveis?'}));
+  app.appendChild(el('p',{class:'suave',texto:q.problemas.length?(q.problemas.length+' ponto(s) para corrigir · '+q.tudoCerto+' checagem(ns) sem problema'):'Todas as '+q.checagens.length+' checagens passaram.'}));
+  app.appendChild(controles());
+  q.problemas.forEach(function(c){
+    app.appendChild(el('div',{class:'cartao'},[el('span',{class:'chip '+c.severidade,texto:c.severidade==='alta'?'Alta':c.severidade==='media'?'Média':'Baixa'}),
+      el('h2',{texto:c.nome}),el('p',{texto:c.quantidade+' caso(s). '+c.efeito}),
+      c.exemplos.length?el('p',{class:'suave mini',texto:'Exemplos: '+c.exemplos.join(', ')}):null]));
+  });
 }
 async function iniciar(){
   if(!ler('token'))return telaEntrada();

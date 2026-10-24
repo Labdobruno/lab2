@@ -86,7 +86,21 @@ export const CSPack = z.object({
   janelaIndicacaoDias: z.number().int().positive().optional(),
 });
 
+export const SEVERIDADES = ['alta', 'media', 'baixa'] as const;
+/* Hipótese: "se isto for verdade (quando), isto custa tanto (impacto, em R$); faça aquilo (acao)".
+   quando e impacto são fórmulas em texto (ver hipoteses/expr.ts); não há código no pack. */
+export const HipotesePack = z.object({
+  chave,
+  titulo: nome,
+  quando: z.string().min(1),
+  impacto: z.string().min(1).optional(),
+  acao: z.string().min(1),
+  severidade: z.enum(SEVERIDADES).optional(),
+  remover,
+});
+
 export const ParametrosPack = z.object({
+  orcamentoAtencao: z.number().int().min(1).max(10).optional(),  // quantos achados aparecem de cada vez
   maturacaoCoorteDias: z.number().int().positive().optional(),  // quanto esperar até uma coorte "amadurecer"
   amostraMinima: z.number().int().positive().optional(),
   janelaHistoricaDias: z.number().int().positive().optional(),
@@ -118,6 +132,7 @@ const camposPack = (estrito: boolean) => {
       linhas: z.array(it(LinhaPrecoPack)).optional(),
       condicoes: z.array(it(CondicaoPagamentoPack)).optional(),
     }).optional(),
+    hipoteses: z.array(it(HipotesePack)).optional(),
     cs: CSPack.optional(),
     parametros: ParametrosPack.optional(),
   }).strict();
@@ -153,6 +168,7 @@ export interface PackResolvido {
     linhas: Omit<z.infer<typeof LinhaPrecoPack>, 'remover'>[];
     condicoes: Omit<z.infer<typeof CondicaoPagamentoPack>, 'remover'>[];
   };
+  hipoteses: Omit<z.infer<typeof HipotesePack>, 'remover'>[];
   cs: z.infer<typeof CSPack>;
   parametros: Required<z.infer<typeof ParametrosPack>>;
 }

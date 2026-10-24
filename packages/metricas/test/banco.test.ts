@@ -37,6 +37,14 @@ describe.skipIf(semBanco)('relatório no banco', () => {
     expect(r.vendas.margemPercentual).toBe(0.9);
     expect(r.retencao.mrrInicial).toBeNull();
 
+    /* regressão: as etapas já alcançadas chegam como lista (o driver não converte arrays do Postgres sem fetch_types) */
+    const [pular] = await sql<{ id: string }[]>`insert into lab.negocio (operacao_id, funil_id, canal_id, etapa_id, criado_em)
+      values (${op.id}, ${funil!.id}, ${canal!.id}, ${lead}, '2026-10-07T12:00:00Z') returning id`;
+    await sql`insert into lab.negocio_transicao (operacao_id, negocio_id, para_etapa_id, em, origem) values (${op.id}, ${pular!.id}, ${contato}, '2026-10-08T12:00:00Z', 'evento')`;
+    await sql`update lab.negocio set etapa_id = ${lead} where id = ${pular!.id}`;       // voltou para lead, mas já tinha chegado a contato
+    const r2 = await relatorio(sql, op, { de: '2026-10-01', ate: '2026-11-01' });
+    expect(r2.coorte.etapas.find(e => e.papel === 'contato')).toMatchObject({ sucessos: 3, total: 4 });
+
     const vazio = await relatorio(sql, op, { de: '2025-01-01', ate: '2025-02-01' });
     expect(vazio.coorte.coorte).toBe(0);
     expect(vazio.canais).toEqual([]);

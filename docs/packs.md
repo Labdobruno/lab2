@@ -57,3 +57,19 @@ POST /admin/operacoes
 ```
 
 Mudar a precificação gera uma nova versão da política de preço. A anterior continua guardada, para cada venda ser avaliada pela regra do dia em que foi fechada.
+
+## Hipóteses (fase 6)
+
+O pack pode ter uma lista `hipoteses`: o que olhar nos números e quanto custa. Cada uma é só texto, sem código:
+
+```json
+{ "chave": "desconto_alto", "titulo": "Descontos acima de 10% estão comendo receita",
+  "quando": "desconto_medio > 0.10 && vendas >= amostra_minima",
+  "impacto": "receita * desconto_medio / (1 - desconto_medio)",
+  "acao": "Rever a alçada de desconto…", "severidade": "media" }
+```
+
+- **`quando`** é a condição para a hipótese aparecer; **`impacto`** é o valor em R$ em jogo (opcional). Os dois são fórmulas: números, variáveis, `+ - * /`, `< <= > >= == !=`, `&& || !`, parênteses e `min`, `max`, `abs`, `se(condição, a, b)`.
+- As variáveis disponíveis estão em `GET /admin/hipoteses/variaveis` (leads, vendas, taxa_ganho, desconto_medio, cac_medio, churn_receita, valor_parado…). Variável inexistente ou fórmula quebrada é erro ao validar o pack (`npm run pack:validar`).
+- Dado ausente é `null` e contamina a conta: a hipótese vai para "sem dados" em vez de disparar ou de contar como zero.
+- A herança funciona como nas outras listas: mesma `chave` sobrescreve, chave nova entra, `"remover": true` tira a herdada. Em `parametros`, `orcamentoAtencao` (padrão 3) limita quantos achados aparecem de cada vez, os de maior impacto primeiro.

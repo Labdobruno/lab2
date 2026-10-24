@@ -31,3 +31,11 @@ Cada decisão tem o porquê, para não ser refeita sem motivo.
 - **Travar** grava, para cada ciclo, a meta de receita e a de cada degrau do funil (por operação e por pessoa). São as mesmas metas que o ritmo e o Fechamento do dia leem.
 - **Fechar o ciclo** só depois do último dia útil, uma vez por ciclo. O retrato guarda metas, ritmo final e métricas, com assinatura SHA-256; a tela mostra "Íntegro" ou "ALTERADO".
 - **Migrations automáticas:** o Worker traz embutidas as migrations (`npm run migracoes:gerar`) e aplica as pendentes, em transação e com trava, na primeira chamada autenticada e a cada rodada do agendamento. Bancos que receberam as duas primeiras à mão são reconhecidos. O `/saude` informa se há migration pendente. Motivo: quem publica o Worker não precisa abrir o SQL Editor do Supabase.
+
+## Fase 6: hipóteses, decisões e qualidade de dados
+
+- **Fórmulas em texto, sem `eval`:** analisador próprio (`packages/nucleo/src/hipoteses/expr.ts`) com lógica de três valores; só aceita a gramática da linguagem, então um pack não executa código.
+- **Achado = hipótese verdadeira + impacto em R$ + os números que a provam.** Ordem por impacto; o orçamento de atenção (3 por padrão) esconde o resto em "em espera".
+- **Canvas de decisão** só acrescenta. **Experimento** guarda o ponto de partida no dia em que começa; ao concluir mede o valor de hoje contra o alvo e escreve o resultado em `lab.aprendizado` (memória comercial). Encerrado, não muda mais.
+- **Operações antigas:** se o pack guardado na operação não tem a biblioteca, o Worker a resolve de novo pelo pack e pelos ajustes da operação.
+- **Correção importante:** o driver do Postgres não converte listas (`text[]`) quando `fetch_types` está desligado, como no pooler do Supabase. Consultas passam a devolver `jsonb`. Isso corrigiu as etapas já alcançadas nas coortes da fase 2.

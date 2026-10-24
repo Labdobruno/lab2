@@ -3,13 +3,15 @@
    sempre em português e apontando o item pela chave, não pela posição. */
 import { PAPEIS_ETAPA, type PapelEtapa } from '../papeis.js';
 import { Pack, PackArquivo, type PackResolvido } from './schema.js';
+import { analisar, ErroExpressao, variaveisUsadas } from '../hipoteses/expr.js';
+import { VARIAVEIS } from '../hipoteses/variaveis.js';
 
 export type Catalogo = Record<string, unknown>;     // id do pack → conteúdo do arquivo
 export interface ResultadoPack { ok: boolean; pack: PackResolvido | null; erros: string[]; avisos: string[] }
 
 const PADROES = {
   calendario: { feriados: 'BR' as const, diasUteis: [1, 2, 3, 4, 5], inicioCicloDia: 1, mesInicioAno: 1, fuso: 'America/Sao_Paulo' },
-  parametros: { maturacaoCoorteDias: 30, amostraMinima: 10, janelaHistoricaDias: 180 },
+  parametros: { maturacaoCoorteDias: 30, amostraMinima: 10, janelaHistoricaDias: 180, orcamentoAtencao: 3 },
   tiposNegocio: ['novo'] as const,
 };
 
@@ -109,6 +111,7 @@ export function resolverPack(id: string, catalogo: Catalogo): ResultadoPack {
       linhas: (p.precificacao?.linhas ?? []) as PackResolvido['precificacao']['linhas'],
       condicoes: (p.precificacao?.condicoes ?? []).map(c => ({ ...c, taxa: c.taxa ?? 0 })) as PackResolvido['precificacao']['condicoes'],
     },
+    hipoteses: (p.hipoteses ?? []) as PackResolvido['hipoteses'],
     cs: p.cs ?? {},
     parametros: { ...PADROES.parametros, ...(p.parametros ?? {}) },
   };
@@ -143,6 +146,15 @@ function conferir(p: PackResolvido, erros: string[], avisos: string[]) {
   duplicadas(p.motivosPerda, 'motivosPerda', erros);
   duplicadas(p.precificacao.linhas, 'precificacao.linhas', erros);
   duplicadas(p.precificacao.condicoes, 'precificacao.condicoes', erros);
+  duplicadas(p.hipoteses, 'hipoteses', erros);
+  for (const h of p.hipoteses) {
+    for (const [campo, texto] of [['quando', h.quando], ['impacto', h.impacto]] as const) {
+      if (texto == null) continue;
+      try {
+        for (const v of variaveisUsadas(analisar(texto))) if (!(v in VARIAVEIS)) erros.push(`hipoteses[${h.chave}].${campo}: a variável "${v}" não existe (veja /admin/hipoteses/variaveis)`);
+      } catch (e) { erros.push(`hipoteses[${h.chave}].${campo}: ${e instanceof ErroExpressao ? e.message : 'fórmula inválida'}`); }
+    }
+  }
 
   const aq = p.funis.filter(f => f.lado === 'aquisicao');
   if (!aq.length) erros.push('o pack precisa de pelo menos um funil de aquisição (lado "aquisicao")');

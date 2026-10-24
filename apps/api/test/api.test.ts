@@ -77,6 +77,31 @@ describe.skipIf(semBanco)('API', () => {
     expect((await chamar('GET', '/admin/operacoes/nao-existe/pessoas')).status).toBe(404);
   });
 
+  it('hipóteses: biblioteca, achados, qualidade, decisão e experimento', async () => {
+    expect(Object.keys(await (await chamar('GET', '/admin/hipoteses/variaveis')).json() as object)).toContain('taxa_ganho');
+    await chamar('POST', '/admin/operacoes', { slug: 'hip', nome: 'Hip', packId: 'base' });
+    /* operação criada antes da fase 6: o pack guardado não tem a biblioteca, e ela vem do catálogo */
+    await sql`update lab.operacao set pack = pack - 'hipoteses' where slug = 'hip'`;
+    const lib = await (await chamar('GET', '/admin/operacoes/hip/hipoteses')).json() as any[];
+    expect(lib.length).toBeGreaterThanOrEqual(8);
+    const a = await (await chamar('GET', '/admin/operacoes/hip/achados?data=2026-10-24')).json() as any;
+    expect(a).toMatchObject({ orcamento: 3, achados: [], errosDeFormula: [] });
+    expect(a.semDados.length).toBeGreaterThan(0);
+    expect(a.contexto.vendas).toBe(0);
+    const q = await (await chamar('GET', '/admin/operacoes/hip/qualidade')).json() as any;
+    expect(q.checagens.length).toBeGreaterThan(10);
+    expect((await chamar('POST', '/admin/operacoes/hip/decisoes', { pergunta: 'x' })).status).toBe(400);
+    const d = await (await chamar('POST', '/admin/operacoes/hip/decisoes', { pergunta: 'Mudar o canal?', escolha: 'Sim', opcoes: ['Sim', 'Não'] })).json() as any;
+    expect(await (await chamar('GET', '/admin/operacoes/hip/decisoes')).json()).toHaveLength(1);
+    const e = await (await chamar('POST', '/admin/operacoes/hip/experimentos', { titulo: 'Testar', metrica: 'vendas', alvo: 0, decisaoId: d.id })).json() as any;
+    expect(e.status).toBe('rodando');
+    expect((await chamar('POST', '/admin/operacoes/hip/experimentos', { titulo: 'Testar', metrica: 'nada', alvo: 1 })).status).toBe(400);
+    const c = await (await chamar('POST', `/admin/operacoes/hip/experimentos/${e.id}/concluir`, { conclusao: 'ok' })).json() as any;
+    expect(c).toMatchObject({ status: 'concluido', atingiu: true });
+    expect((await chamar('POST', `/admin/operacoes/hip/experimentos/${e.id}/concluir`, {})).status).toBe(409);
+    expect((await chamar('GET', '/admin/operacoes/nao-existe/achados')).status).toBe(404);
+  });
+
   it('lista packs válidos', async () => {
     const r = await (await chamar('GET', '/admin/packs')).json() as any[];
     expect(r.every(p => p.ok)).toBe(true);

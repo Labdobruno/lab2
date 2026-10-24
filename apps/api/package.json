@@ -8,6 +8,6 @@
     "dev": "wrangler dev",
     "deploy": "wrangler deploy"
   },
-  "dependencies": { "@lab/nucleo": "*", "@lab/conectores": "*", "@lab/metricas": "*", "@lab/planejamento": "*", "@lab/ciclos": "*", "postgres": "3.4.9" },
+  "dependencies": { "@lab/nucleo": "*", "@lab/conectores": "*", "@lab/metricas": "*", "@lab/planejamento": "*", "@lab/ciclos": "*", "@lab/hipoteses": "*", "postgres": "3.4.9" },
   "devDependencies": { "@cloudflare/workers-types": "5.20261003.1", "wrangler": "4.147.0" }
 }

@@ -25,6 +25,13 @@
      GET  /admin/operacoes/:slug/buildup?receita=&data=&ticket=   sugestão de metas, de receita até tentativas (não grava)
      GET  /admin/operacoes/:slug/ritmo?data=    esperado até hoje, quem está no ritmo e quem está atrás
      GET  /admin/operacoes/:slug/fechamento-do-dia?data=
+     GET  /admin/hipoteses/variaveis            variáveis que as fórmulas das hipóteses podem usar
+     GET  /admin/operacoes/:slug/hipoteses      biblioteca de hipóteses do pack (fórmulas em texto)
+     GET  /admin/operacoes/:slug/achados?data=  achados dentro do orçamento de atenção, em espera e sem dados
+     GET  /admin/operacoes/:slug/qualidade?data=  checagens de qualidade de dados
+     GET|POST /admin/operacoes/:slug/decisoes   canvas de decisão { pergunta, opcoes[], escolha, porque?, criterioSucesso?, revisarEm?, hipoteseId?, contexto? }
+     GET|POST /admin/operacoes/:slug/experimentos            { titulo, metrica, alvo, fimPrevisto?, hipoteseId?, decisaoId? }
+     POST /admin/operacoes/:slug/experimentos/:id/concluir   { descartar?, conclusao? }
      GET  /admin/operacoes/:slug/quarter?data=  plano do quarter: passos, cenários e programa de ciclos
      POST /admin/operacoes/:slug/quarter        inicia o quarter (passo 1)        ?data=
      GET  /admin/operacoes/:slug/quarter/diagnostico                              passo 1: o quarter anterior
@@ -37,9 +44,9 @@
      GET  /admin/operacoes/:slug/retratos
      GET|POST /admin/operacoes/:slug/aprendizados     { tipo, texto, cicloInicio? }
      GET  /admin/operacoes/:slug/metricas?de=AAAA-MM-DD&ate=AAAA-MM-DD   canais, coorte, fluxo, vendas e retenção (somente leitura) */
-import { FUNCOES_PESSOA, resolverPack } from '@lab/nucleo';
+import { FUNCOES_PESSOA, resolverPack, VARIAVEIS, type PackResolvido } from '@lab/nucleo';
 import {
-  atualizarPackDaOperacao, carregarConector, conectorDoTipo, criarOperacao, iguaisSeguro, importar, processarPendentes,
+  atualizarPackDaOperacao, carregarConector, packDaOperacao, conectorDoTipo, criarOperacao, iguaisSeguro, importar, processarPendentes,
   receberWebhook, sincronizar, CONECTORES, type Dependencias, type LinhaConector,
 } from '@lab/conectores';
 import { DICIONARIO, operacaoPorSlug, relatorio, validarPeriodo } from '@lab/metricas';
@@ -50,6 +57,9 @@ import {
   aprendizados, confirmarEsforco, criarQuarter, definirMeta, definirPrograma, diagnostico, ErroDeRegra, escolherCenario, fecharCiclo,
   quarterDaOperacao, registrarAprendizado, retratos, travarQuarter,
 } from '@lab/ciclos';
+import {
+  avaliarHipoteses, checarQualidade, concluirExperimento, decisoes, ErroDeMemoria, experimentos, iniciarExperimento, montarContexto, registrarDecisao,
+} from '@lab/hipoteses';
 import { garantirMigracoes } from './migracoes.js';
 import { MIGRACOES } from './migracoes.gen.js';
 import type { Sql } from 'postgres';
@@ -98,6 +108,7 @@ export function criarApp(opts: { sql: Sql; env: Ambiente; fetch?: typeof fetch; 
     }
 
     if (recurso === 'metricas' && id === 'dicionario' && m === 'GET') return json(DICIONARIO);
+    if (recurso === 'hipoteses' && id === 'variaveis' && m === 'GET') return json(VARIAVEIS);
 
     if (recurso === 'operacoes') {
       if (!id && m === 'GET') return json(await sql`select id, slug, nome, pack_id, pack_versao, ativa, criado_em from lab.operacao order by criado_em`);
@@ -110,6 +121,46 @@ export function criarApp(opts: { sql: Sql; env: Ambiente; fetch?: typeof fetch; 
         } catch (e) {
           const msg = (e as Error).message;
           return erro(/duplicate key|unique/i.test(msg) ? `já existe uma operação "${b.slug}"` : msg, /unique/i.test(msg) ? 409 : 400);
+        }
+      }
+      if (id && ['hipoteses', 'achados', 'qualidade', 'decisoes', 'experimentos'].includes(acao ?? '')) {
+        const op = await operacaoPlanejamento(sql, id);
+        if (!op) return erro('operação não encontrada', 404);
+        const hoje = hojeNoFuso(op.fuso, (opts.agora ?? (() => new Date()))());
+        const data = url.searchParams.get('data') ?? hoje;
+        if (!dataValida(data)) return erro('data deve ser AAAA-MM-DD');
+        try {
+          const biblioteca = async () => {
+            const [o] = await sql<{ pack: PackResolvido | null; pack_id: string; ajustes: Record<string, unknown> }[]>`select pack, pack_id, ajustes from lab.operacao where id = ${op.id}`;
+            const guardado = o?.pack?.hipoteses;
+            /* operações criadas antes da fase 6 não têm a biblioteca guardada: resolve de novo pelo pack e pelos ajustes */
+            const pack = guardado ? o!.pack! : packDaOperacao(o!.pack_id, o!.ajustes, CATALOGO).pack;
+            return { hipoteses: pack?.hipoteses ?? [], orcamento: pack?.parametros?.orcamentoAtencao ?? 3, amostraMinima: pack?.parametros?.amostraMinima ?? 10 };
+          };
+          if (acao === 'hipoteses' && m === 'GET') return json((await biblioteca()).hipoteses);
+          if (acao === 'qualidade' && m === 'GET') return json(await checarQualidade(sql, op, data));
+          if (acao === 'achados' && m === 'GET') {
+            const b = await biblioteca();
+            const ctx = await montarContexto(sql, op, data, { amostraMinima: b.amostraMinima });
+            return json({ data, ...avaliarHipoteses(b.hipoteses, ctx, b.orcamento), contexto: ctx });
+          }
+          if (acao === 'decisoes' && m === 'GET') return json(await decisoes(sql, op));
+          if (acao === 'decisoes' && m === 'POST') return json(await registrarDecisao(sql, op, await corpoJSON(req) as never), 201);
+          if (acao === 'experimentos' && m === 'GET') {
+            const b = await biblioteca();
+            return json(await experimentos(sql, op, await montarContexto(sql, op, data, { amostraMinima: b.amostraMinima })));
+          }
+          if (acao === 'experimentos' && !sub && m === 'POST') {
+            const b = await biblioteca();
+            return json(await iniciarExperimento(sql, op, await montarContexto(sql, op, data, { amostraMinima: b.amostraMinima }), data, await corpoJSON(req) as never), 201);
+          }
+          if (acao === 'experimentos' && sub && partes[4] === 'concluir' && m === 'POST') {
+            const b = await biblioteca(); const corpo = await corpoJSON(req);
+            return json(await concluirExperimento(sql, op, sub, await montarContexto(sql, op, data, { amostraMinima: b.amostraMinima }), { descartar: corpo.descartar === true, conclusao: corpo.conclusao }));
+          }
+        } catch (e) {
+          if (e instanceof ErroDeMemoria) return erro(e.message, e.status);
+          throw e;
         }
       }
       if (id && ['quarter', 'fechar-ciclo', 'retratos', 'aprendizados'].includes(acao ?? '')) {

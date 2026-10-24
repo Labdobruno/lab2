@@ -69,5 +69,15 @@
     "condicoes": [ { "chave": "vista", "nome": "À vista", "taxa": 0 } ]
   },
   "cs": { "recorrente": false, "janelaRenovacaoDias": 60, "janelaIndicacaoDias": 90 },
-  "parametros": { "maturacaoCoorteDias": 30, "amostraMinima": 10, "janelaHistoricaDias": 180 }
+  "parametros": { "maturacaoCoorteDias": 30, "amostraMinima": 10, "janelaHistoricaDias": 180 },
+  "hipoteses": [
+    {"chave": "desconto_alto", "titulo": "Descontos acima de 10% estão comendo receita", "quando": "desconto_medio > 0.10 && vendas >= amostra_minima", "impacto": "receita * desconto_medio / (1 - desconto_medio)", "acao": "Rever a alçada de desconto e exigir contrapartida (prazo, escopo, pagamento) em descontos acima de 10%.", "severidade": "media"},
+    {"chave": "taxa_ganho_baixa", "titulo": "Taxa de ganho abaixo de 25%", "quando": "fechados >= amostra_minima && taxa_ganho < 0.25", "impacto": "(0.25 - taxa_ganho) * fechados * ticket_medio", "acao": "Olhar os motivos de perda e o passo de negociação; apertar a qualificação antes da proposta.", "severidade": "alta"},
+    {"chave": "no_show_alto", "titulo": "Reuniões agendadas que não acontecem", "quando": "amostra_coorte >= amostra_minima && passo_realizada < 0.7", "impacto": "(0.7 - passo_realizada) * conv_agendada * amostra_coorte * (conv_ganho / conv_realizada) * ticket_medio", "acao": "Confirmar a reunião um dia antes, lembrar no dia e ter uma regra de remarcação.", "severidade": "media"},
+    {"chave": "pipeline_parado", "titulo": "Dinheiro parado no pipeline", "quando": "valor_parado > 0 && valor_parado >= 0.2 * valor_aberto", "impacto": "valor_parado * taxa_ganho", "acao": "Revisar os negócios parados um a um: avançar, reagendar ou encerrar.", "severidade": "media"},
+    {"chave": "perda_por_preco", "titulo": "Perdas concentradas em preço", "quando": "valor_perdido > 0 && valor_perdido_preco / valor_perdido > 0.3", "impacto": "valor_perdido_preco * taxa_ganho", "acao": "Testar condição de pagamento ou um pacote menor antes de ceder no preço.", "severidade": "media"},
+    {"chave": "cac_acima_da_margem", "titulo": "Custo de aquisição maior que a margem da venda", "quando": "vendas >= 1 && cac_medio > margem_percentual * ticket_medio", "impacto": "(cac_medio - margem_percentual * ticket_medio) * vendas", "acao": "Rever ou cortar os canais com pior CAC (veja o ROI por canal).", "severidade": "alta"},
+    {"chave": "churn_alto", "titulo": "Cancelamentos acima de 5% da receita recorrente", "quando": "churn_receita > 0.05", "impacto": "mrr_inicial * churn_receita * 12", "acao": "Mapear os motivos de cancelamento e agir nas contas em risco antes da renovação.", "severidade": "alta"},
+    {"chave": "ritmo_atras", "titulo": "Metade do time ou mais atrás do ritmo", "quando": "pct_atras >= 0.5 && dias_uteis_restantes > 0", "impacto": "max(receita_esperada_ate_hoje - receita_ate_hoje, 0)", "acao": "Abrir o plano do dia de quem está atrás e fazer o ajuste de contingência.", "severidade": "alta"}
+  ]
 }

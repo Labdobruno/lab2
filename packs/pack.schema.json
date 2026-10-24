@@ -403,6 +403,49 @@
       },
       "additionalProperties": false
     },
+    "hipoteses": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "chave": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_-]*$"
+          },
+          "titulo": {
+            "type": "string",
+            "minLength": 1
+          },
+          "quando": {
+            "type": "string",
+            "minLength": 1
+          },
+          "impacto": {
+            "type": "string",
+            "minLength": 1
+          },
+          "acao": {
+            "type": "string",
+            "minLength": 1
+          },
+          "severidade": {
+            "type": "string",
+            "enum": [
+              "alta",
+              "media",
+              "baixa"
+            ]
+          },
+          "remover": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "chave"
+        ],
+        "additionalProperties": false
+      }
+    },
     "cs": {
       "type": "object",
       "properties": {
@@ -430,6 +473,11 @@
     "parametros": {
       "type": "object",
       "properties": {
+        "orcamentoAtencao": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10
+        },
         "maturacaoCoorteDias": {
           "type": "integer",
           "exclusiveMinimum": 0,

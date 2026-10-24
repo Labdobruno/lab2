@@ -21,6 +21,9 @@
       ],
       "@lab/ciclos": [
         "packages/ciclos/src/index.ts"
+      ],
+      "@lab/hipoteses": [
+        "packages/hipoteses/src/index.ts"
       ]
     }
   },
