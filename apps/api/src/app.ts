@@ -1,5 +1,8 @@
 /* API do LAB V2. Rotas:
    GET  /app                                     tela (página sem dados; pede o ADMIN_TOKEN para buscar na API)
+   GET  /auth/config                             { login: true|false }
+   POST /auth/entrar  { email, senha }           login do administrador pelo Supabase
+   POST /auth/renovar { refreshToken }
    GET  /saude                                  público
    POST /entrada/:conector                      público, mas cada conector confere a própria assinatura/chave
    /admin/*                                     exige Authorization: Bearer <ADMIN_TOKEN>
@@ -32,8 +35,9 @@ import {
 import type { Sql } from 'postgres';
 import { CATALOGO } from './catalogo.js';
 import { CSP, PAGINA } from './tela.js';
+import { entrar, loginAtivo, renovar, tokenDoAdmin, type AmbienteAuth } from './auth.js';
 
-export interface Ambiente {
+export interface Ambiente extends AmbienteAuth {
   ADMIN_TOKEN?: string;
   [segredo: string]: unknown;
 }
@@ -198,11 +202,28 @@ export function criarApp(opts: { sql: Sql; env: Ambiente; fetch?: typeof fetch; 
         const r = await receberWebhook(dep, c, { cabecalhos: req.headers, corpo: await req.text() });
         return json(r.corpo, r.http);
       }
+      if (partes[0] === 'auth') {
+        const f = opts.fetch ?? fetch;
+        if (partes[1] === 'config' && req.method === 'GET') return json({ login: loginAtivo(opts.env) });
+        if (!loginAtivo(opts.env)) return erro('login por e-mail não está configurado', 404);
+        if (partes[1] === 'entrar' && req.method === 'POST') {
+          const b = await corpoJSON(req);
+          const sessao = typeof b.email === 'string' && typeof b.senha === 'string' ? await entrar(opts.env, f, b.email, b.senha) : null;
+          return sessao ? json(sessao) : erro('e-mail ou senha incorretos', 401);
+        }
+        if (partes[1] === 'renovar' && req.method === 'POST') {
+          const b = await corpoJSON(req);
+          const sessao = typeof b.refreshToken === 'string' ? await renovar(opts.env, f, b.refreshToken) : null;
+          return sessao ? json(sessao) : erro('sessão expirada', 401);
+        }
+      }
       if (partes[0] === 'admin') {
         const token = opts.env.ADMIN_TOKEN;
+        const tokenOk = !!token && token.length >= 24;
+        if (!tokenOk && !loginAtivo(opts.env)) return erro('ADMIN_TOKEN não configurado (mínimo 24 caracteres)', 503);
         const enviado = (req.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '');
-        if (!token || token.length < 24) return erro('ADMIN_TOKEN não configurado (mínimo 24 caracteres)', 503);
-        if (!iguaisSeguro(enviado, token)) return erro('não autorizado', 401);
+        const autorizado = (tokenOk && iguaisSeguro(enviado, token!)) || await tokenDoAdmin(opts.env, opts.fetch ?? fetch, enviado);
+        if (!autorizado) return erro('não autorizado', 401);
         return await admin(req, partes.slice(1), url);
       }
       return erro('rota não encontrada', 404);

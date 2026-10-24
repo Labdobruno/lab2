@@ -1,6 +1,6 @@
 /* Tela do LAB V2 (fase 4): uma pergunta por tela, detalhe só quando pedido.
-   Página estática, sem dados: tudo é buscado na API com o ADMIN_TOKEN que a pessoa digita
-   (guardado só na aba, em sessionStorage). Todo texto vindo da API entra por textContent. */
+   Página estática, sem dados: tudo é buscado na API. Entra com e-mail e senha (Supabase, via /auth/entrar)
+   ou, enquanto o login não estiver configurado, com o ADMIN_TOKEN. A sessão fica só na aba (sessionStorage). Todo texto vindo da API entra por textContent. */
 
 export const CSP = "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
 
@@ -49,18 +49,36 @@ function limpar(){while(app.firstChild)app.removeChild(app.firstChild)}
 function numero(n){return new Intl.NumberFormat('pt-BR',{maximumFractionDigits:1}).format(n)}
 function data(d){var p=d.split('-');return p[2]+'/'+p[1]+'/'+p[0]}
 function chip(s){return el('span',{class:'chip '+(s||'sem'),texto:s?ROTULO[s]:'Sem meta'})}
-async function api(caminho){
+async function renovarSessao(){
+  var rt=ler('refresh');if(!rt)return false;
+  try{var r=await fetch('/auth/renovar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({refreshToken:rt})});
+    if(!r.ok)return false;var s=await r.json();guardar('token',s.accessToken);guardar('refresh',s.refreshToken);return true}catch(e){return false}
+}
+async function api(caminho,tentou){
   var r=await fetch(caminho,{headers:{authorization:'Bearer '+(ler('token')||'')}});
-  if(r.status===401){guardar('token',null);throw new Error('401')}
+  if(r.status===401){if(!tentou&&await renovarSessao())return api(caminho,true);guardar('token',null);guardar('refresh',null);throw new Error('401')}
   if(!r.ok){var c={};try{c=await r.json()}catch(e){}throw new Error(c.erro||('erro '+r.status))}
   return r.json();
 }
-function telaEntrada(msg){
+async function loginAtivo(){try{var r=await fetch('/auth/config');return (await r.json()).login===true}catch(e){return false}}
+async function telaEntrada(msg){
   limpar();
-  var campo=el('input',{type:'password',id:'tk',autocomplete:'current-password','aria-label':'Chave de acesso'});
+  var comEmail=await loginAtivo();
   app.appendChild(el('h1',{texto:'LAB'}));
-  app.appendChild(el('p',{class:'suave',texto:'Digite a chave de acesso (o ADMIN_TOKEN). Ela fica guardada só nesta aba do navegador.'}));
   if(msg)app.appendChild(el('p',{class:'erro',texto:msg}));
+  if(comEmail){
+    var em=el('input',{type:'email',id:'em',autocomplete:'username','aria-label':'E-mail'});
+    var se=el('input',{type:'password',id:'se',autocomplete:'current-password','aria-label':'Senha'});
+    app.appendChild(el('p',{class:'suave',texto:'Entre com seu e-mail e sua senha.'}));
+    app.appendChild(el('form',{onsubmit:async function(e){e.preventDefault();
+      try{var r=await fetch('/auth/entrar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:em.value.trim(),senha:se.value})});
+        if(!r.ok)return telaEntrada('E-mail ou senha incorretos.');
+        var s=await r.json();guardar('token',s.accessToken);guardar('refresh',s.refreshToken);iniciar()}
+      catch(x){telaEntrada('Não consegui falar com o servidor.')}}},[el('p',{},[em]),el('p',{},[se]),el('button',{class:'primario',type:'submit',texto:'Entrar'})]));
+    return;
+  }
+  var campo=el('input',{type:'password',id:'tk',autocomplete:'current-password','aria-label':'Chave de acesso'});
+  app.appendChild(el('p',{class:'suave',texto:'Digite a chave de acesso (o ADMIN_TOKEN). Ela fica guardada só nesta aba do navegador.'}));
   app.appendChild(el('form',{onsubmit:function(e){e.preventDefault();guardar('token',campo.value.trim());iniciar()}},[campo,' ',el('button',{class:'primario',type:'submit',texto:'Entrar'})]));
 }
 function cabecalho(titulo,sub){
@@ -71,7 +89,7 @@ function controles(){
     estado.ops.map(function(o){var op=el('option',{value:o.slug,texto:o.nome});if(o.slug===estado.slug)op.selected=true;return op}));
   var dt=el('input',{type:'date','aria-label':'Dia',value:estado.data||'',onchange:function(){estado.data=dt.value||null;estado.pessoa=null;desenhar()}});
   var hoje=el('button',{type:'button',texto:'Hoje',onclick:function(){estado.data=null;estado.pessoa=null;desenhar()}});
-  var sair=el('button',{type:'button',texto:'Sair',onclick:function(){guardar('token',null);iniciar()}});
+  var sair=el('button',{type:'button',texto:'Sair',onclick:function(){guardar('token',null);guardar('refresh',null);iniciar()}});
   return el('div',{class:'barra'},[estado.ops.length>1?sel:null,dt,hoje,sair]);
 }
 function agrupar(linhas){
@@ -85,7 +103,7 @@ async function desenhar(){
   var q=estado.data?('?data='+encodeURIComponent(estado.data)):'';
   var r;
   try{r=await api('/admin/operacoes/'+encodeURIComponent(estado.slug)+'/ritmo'+q)}
-  catch(e){if(e.message==='401')return telaEntrada('Chave recusada. Confira e tente de novo.');limpar();app.appendChild(el('p',{class:'erro',texto:'Não consegui carregar: '+e.message}));return}
+  catch(e){if(e.message==='401')return telaEntrada('Acesso recusado. Entre de novo.');limpar();app.appendChild(el('p',{class:'erro',texto:'Não consegui carregar: '+e.message}));return}
   estado.data=estado.data||r.hoje;
   limpar();
   var grupos=agrupar(r.linhas);
@@ -127,7 +145,7 @@ async function iniciar(){
   if(!ler('token'))return telaEntrada();
   limpar();app.appendChild(el('p',{class:'suave',texto:'Carregando…'}));
   try{estado.ops=await api('/admin/operacoes')}
-  catch(e){return telaEntrada(e.message==='401'?'Chave recusada. Confira e tente de novo.':'Não consegui falar com a API: '+e.message)}
+  catch(e){return telaEntrada(e.message==='401'?'Acesso recusado. Entre de novo.':'Não consegui falar com a API: '+e.message)}
   if(!estado.ops.length){limpar();cabecalho('LAB','Ainda não existe nenhuma operação.').forEach(function(n){if(n)app.appendChild(n)});app.appendChild(el('div',{class:'cartao'},[el('p',{texto:'Crie a primeira operação (passo 4 do guia de implantação) e volte aqui.'})]));return}
   var salvo=ler('slug');
   estado.slug=estado.ops.some(function(o){return o.slug===salvo})?salvo:estado.ops[0].slug;

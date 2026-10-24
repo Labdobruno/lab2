@@ -16,3 +16,10 @@ Cada decisão tem o porquê, para não ser refeita sem motivo.
 | D10 | 24/10/2026 | Conectores não gravam telefone, e-mail, endereço nem o texto das notas | Minimizar dado pessoal de clientes de terceiros (LGPD) |
 | D11 | 24/10/2026 | Stack: TypeScript, Cloudflare Workers e Supabase Postgres; testes contra um Postgres real com as opções de conexão de produção | É a stack que o Bruno já usa; o teste com as opções reais pegou um bug que só apareceria em produção |
 | D12 | 24/10/2026 | Construir base e conectores antes de plugar qualquer operação; aprovado até a segunda operação (licitação) | Decisão do Bruno |
+
+## Login do administrador pelo Supabase Auth
+
+- **Decisão:** a tela entra com e-mail e senha de um usuário do Supabase Auth; só o `ADMIN_EMAIL` é aceito. O `ADMIN_TOKEN` continua valendo para scripts (curl) e como reserva, e pode ser removido quando não for mais necessário.
+- **Como:** o Worker repassa e-mail e senha ao Supabase (`/auth/entrar`), e a cada chamada de `/admin` pergunta ao Supabase de quem é o token. A página nunca fala com o Supabase, então a política de segurança da tela continua fechada.
+- **Por quê:** senha própria, troca por e-mail, possibilidade de mais usuários e nenhum segredo único repartido.
+- **Fora desta etapa:** verificação em duas etapas (MFA) no login.
