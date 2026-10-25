@@ -263,7 +263,7 @@ export function foco(prios: Array<{ st?: string }> | null | undefined) {
 /* ---------- meta ambiciosa × meta viável: mostra o que a meta exige, não reduz a meta ---------- */
 export type Cenarios = { continuidade?: number | null; conservador?: number | null; base?: number | null; otimista?: number | null };
 export function metaVsCenarios(meta: unknown, cen: Cenarios | null | undefined, parte?: { fixo?: number | null; novo?: number | null } | null, depend?: Array<string | null | undefined>) {
-  const m = num(meta), C = cen ?? {}; if (m == null) return { erro: 'sem meta definida' as const };
+  const m = num(meta), C = cen ?? {}; if (m == null) return { erro: 'sem meta definida' };
   const linhas = ([['continuidade', 'Continuidade do ritmo atual (receita do quarter anterior)'], ['conservador', 'Cenário conservador'], ['base', 'Cenário-base'], ['otimista', 'Cenário otimista']] as Array<[keyof Cenarios, string]>)
     .map(([k, nome]) => { const v = num(C[k]); return { k, nome, v, distancia: v == null ? null : m - v, alcanca: v == null ? null : v >= m - 0.5 }; });
   const base = num(C.base), fixo = num(parte?.fixo) ?? 0, novo = num(parte?.novo);
@@ -321,8 +321,8 @@ export interface TaxaComFonte { v?: number | null; fonte?: string; n?: number }
 export interface PassoBottomUp { k: string; nome: string; v: number | null; taxa: number | null; fonte: string | null; n?: number; como: string }
 export function bottomUp(meta: unknown, tx: Record<string, TaxaComFonte> | null | undefined, ticket: TaxaComFonte | null | undefined, opts?: { cicloDias?: number | null; diasMes?: number | null; capacidade?: Record<string, number | null> }) {
   const m = num(meta), tk = ticket ? num(ticket.v) : null, T = tx ?? {};
-  if (m == null) return { erro: 'sem meta de receita no mês' as const };
-  if (!(tk != null && tk > 0)) return { erro: 'sem ticket (meta nem histórico) para converter receita em vendas' as const };
+  if (m == null) return { erro: 'sem meta de receita no mês' };
+  if (!(tk != null && tk > 0)) return { erro: 'sem ticket (meta nem histórico) para converter receita em vendas' };
   const passos: PassoBottomUp[] = [{ k: 'vendas', nome: 'Vendas necessárias', v: m / tk, taxa: tk, fonte: ticket?.fonte ?? null, como: 'receita ÷ ticket' }], falta: string[] = [];
   const cadeia: Array<[string, string, string]> = [['oportunidades', 'Oportunidades qualificadas necessárias', TX.oportVenda], ['reuniao_realizada', 'Reuniões realizadas necessárias', TX.realOport], ['agendamento', 'Reuniões agendadas necessárias', TX.agReal], ['leads', 'Leads necessários', TX.leadAg], ['contato', 'Contatos (atividades) estimados', TX.contatoAg]];
   for (const [k, nome, t] of cadeia) {
@@ -405,7 +405,8 @@ export interface Risco { id?: string; txt?: string; resposta?: string }
 export interface Decisao { id?: string; tipo?: string; texto?: string }
 export interface Versao { n: number; em: number | string; por: string; motivo: string; premissas?: unknown; revisao?: unknown; [campo: string]: unknown }
 export interface DocQuarter {
-  status?: 'rascunho' | 'publicado' | 'encerrado' | string; versao?: number; publicadoEm?: number | string; publicadoPor?: string;
+  status?: 'rascunho' | 'publicado' | 'encerrado' | string; versao?: number; publicadoEm?: number | string | null; publicadoPor?: string;
+  premissas?: unknown; programa?: unknown; respostas?: Record<string, unknown>; encerramento?: unknown;
   objetivo?: { texto?: string; ind?: string; alvo?: unknown }; krs?: Record<string, KR>; prioridades?: Record<string, Omit<Prioridade, 'id'>>; iniciativas?: Record<string, Iniciativa>;
   meses?: Record<string | number, MesDoQuarter>; cenarios?: unknown; riscos?: Record<string, Risco>; gatilhos?: Record<string, Gatilho>; capacidade?: unknown; decisoes?: Record<string, Decisao>;
   versoes?: Record<string, Versao>; fechMes?: Record<string | number, { em?: unknown }>;
