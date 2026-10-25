@@ -13,6 +13,7 @@ export default defineConfig({
       '@lab/studio': fileURLToPath(new URL('./packages/studio/src/index.ts', import.meta.url)),
       '@lab/dia': fileURLToPath(new URL('./packages/dia/src/index.ts', import.meta.url)),
       '@lab/estrategia': fileURLToPath(new URL('./packages/estrategia/src/index.ts', import.meta.url)),
+      '@lab/economia': fileURLToPath(new URL('./packages/economia/src/index.ts', import.meta.url)),
     },
   },
   test: {

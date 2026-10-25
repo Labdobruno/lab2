@@ -7,7 +7,7 @@
    - a lista de etapas de um funil é substituída inteira quando o filho a declara (a ordem importa). */
 import { z } from 'zod';
 import {
-  BASES_LINHA_PRECO, GRUPOS_LINHA_PRECO, GRUPOS_MOTIVO_PERDA, LADOS, PAPEIS_ATIVIDADE, PAPEIS_ETAPA,
+  BASES_LINHA_PRECO, CATEGORIAS_CUSTO, GRUPOS_LINHA_PRECO, TIPOS_COMISSAO, GRUPOS_MOTIVO_PERDA, LADOS, PAPEIS_ATIVIDADE, PAPEIS_ETAPA,
   TIPOS_CANAL, TIPOS_NEGOCIO,
 } from '../papeis.js';
 
@@ -54,19 +54,34 @@ export const LinhaPrecoPack = z.object({
   grupo: z.enum(GRUPOS_LINHA_PRECO),
   base: z.enum(BASES_LINHA_PRECO),
   valor: z.number().finite().nonnegative().optional(),   // % (0–1) ou R$; "informado" vem de cada venda
+  excluir: z.array(chave).optional(),                     // dedução percentual sobre o preço MENOS estes custos (ex.: imposto sobre preço − kit)
+  categoria: z.enum(CATEGORIAS_CUSTO).optional(),         // custo informado: cpv, servico, contingencia, interno, reserva
   remover,
 });
 
+export const PartePagamento = z.object({ fracao: fracao, dias: z.number().int().min(0).max(3650) });   // parte do preço recebida N dias depois da venda
 export const CondicaoPagamentoPack = z.object({
   chave, nome,
   taxa: fracao.optional(),                                // custo da condição sobre o preço (maquininha, financeira); padrão 0
+  antecipacao: fracao.optional(),                         // taxa de antecipação sobre o preço (cartão); padrão 0
+  partes: z.array(PartePagamento).optional(),             // divisão do recebimento (somam 1); padrão: tudo no ato
   remover,
 });
 
+export const ComissaoPack = z.object({
+  tipo: z.enum(TIPOS_COMISSAO),                           // nenhuma · fixa (sempre a alvo) · por_margem (linear entre mínima e alvo, piso na mínima, sem teto)
+  alvo: fracao.optional(),                                // % do líquido antes da comissão
+  minima: fracao.optional(),
+});
+
 export const PrecificacaoPack = z.object({
-  margemAlvo: fracao.optional(),
+  margemAlvo: fracao.optional(),                          // MC % sobre a receita líquida
   margemMinima: fracao.optional(),
   descontoMaximo: fracao.optional(),
+  custoCapitalMes: fracao.optional(),                     // custo do dinheiro ao mês (custo financeiro do prazo)
+  custosFixosMes: z.number().finite().nonnegative().optional(),
+  lucroDesejadoMes: z.number().finite().nonnegative().optional(),
+  comissao: ComissaoPack.optional(),
   linhas: z.array(LinhaPrecoPack).optional(),
   condicoes: z.array(CondicaoPagamentoPack).optional(),
 });
@@ -164,9 +179,10 @@ export interface PackResolvido {
   motivosPerda: Omit<z.infer<typeof MotivoPerdaPack>, 'remover'>[];
   tiposNegocio: z.infer<typeof Pack>['tiposNegocio'] & {};
   precificacao: {
-    margemAlvo?: number; margemMinima?: number; descontoMaximo?: number;
+    margemAlvo?: number; margemMinima?: number; descontoMaximo?: number; custoCapitalMes?: number; custosFixosMes?: number; lucroDesejadoMes?: number;
+    comissao?: z.infer<typeof ComissaoPack>;
     linhas: Omit<z.infer<typeof LinhaPrecoPack>, 'remover'>[];
-    condicoes: Omit<z.infer<typeof CondicaoPagamentoPack>, 'remover'>[];
+    condicoes: (Omit<z.infer<typeof CondicaoPagamentoPack>, 'remover'> & { taxa: number })[];
   };
   hipoteses: Omit<z.infer<typeof HipotesePack>, 'remover'>[];
   cs: z.infer<typeof CSPack>;

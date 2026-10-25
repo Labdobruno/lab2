@@ -81,3 +81,8 @@ export const GRUPOS_LINHA_PRECO = ['deducao', 'custo_variavel', 'comissao'] as c
 export type GrupoLinhaPreco = (typeof GRUPOS_LINHA_PRECO)[number];
 export const BASES_LINHA_PRECO = ['percentual_preco', 'percentual_liquido', 'fixo', 'informado'] as const;
 export type BaseLinhaPreco = (typeof BASES_LINHA_PRECO)[number];
+/* categoria do custo informado na venda: CPV (do produto), serviço, contingência, interno e reserva (custo que não gera conta a pagar, mas existe) */
+export const CATEGORIAS_CUSTO = ['cpv', 'servico', 'contingencia', 'interno', 'reserva'] as const;
+export type CategoriaCusto = (typeof CATEGORIAS_CUSTO)[number];
+export const TIPOS_COMISSAO = ['nenhuma', 'fixa', 'por_margem'] as const;
+export type TipoComissao = (typeof TIPOS_COMISSAO)[number];

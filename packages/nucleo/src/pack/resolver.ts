@@ -108,6 +108,10 @@ export function resolverPack(id: string, catalogo: Catalogo): ResultadoPack {
       ...(p.precificacao?.margemAlvo != null ? { margemAlvo: p.precificacao.margemAlvo } : {}),
       ...(p.precificacao?.margemMinima != null ? { margemMinima: p.precificacao.margemMinima } : {}),
       ...(p.precificacao?.descontoMaximo != null ? { descontoMaximo: p.precificacao.descontoMaximo } : {}),
+      ...(p.precificacao?.custoCapitalMes != null ? { custoCapitalMes: p.precificacao.custoCapitalMes } : {}),
+      ...(p.precificacao?.custosFixosMes != null ? { custosFixosMes: p.precificacao.custosFixosMes } : {}),
+      ...(p.precificacao?.lucroDesejadoMes != null ? { lucroDesejadoMes: p.precificacao.lucroDesejadoMes } : {}),
+      ...(p.precificacao?.comissao ? { comissao: p.precificacao.comissao } : {}),
       linhas: (p.precificacao?.linhas ?? []) as PackResolvido['precificacao']['linhas'],
       condicoes: (p.precificacao?.condicoes ?? []).map(c => ({ ...c, taxa: c.taxa ?? 0 })) as PackResolvido['precificacao']['condicoes'],
     },
@@ -199,5 +203,15 @@ function conferir(p: PackResolvido, erros: string[], avisos: string[]) {
     if (l.base !== 'informado' && l.valor == null) erros.push(`precificacao.linhas[${l.chave}]: falta "valor" (só a base "informado" pode ficar sem)`);
     if ((l.base === 'percentual_preco' || l.base === 'percentual_liquido') && l.valor != null && l.valor > 1) erros.push(`precificacao.linhas[${l.chave}]: percentual acima de 1 (use 0,06 para 6%)`);
   }
+  for (const c of pr.condicoes) {
+    if (c.partes?.length) { const soma = c.partes.reduce((a, x) => a + x.fracao, 0); if (Math.abs(soma - 1) > 1e-6) erros.push(`precificacao.condicoes[${c.chave}]: as partes do recebimento somam ${Math.round(soma * 100)}%, precisam somar 100%`); }
+  }
+  for (const l of pr.linhas) for (const x of l.excluir ?? []) if (!pr.linhas.some(y => y.chave === x && y.base === 'informado')) erros.push(`precificacao.linhas[${l.chave}]: "excluir" aponta para "${x}", que não é um custo informado desta política`);
+  if (pr.comissao?.tipo === 'por_margem') {
+    if (pr.comissao.alvo == null || pr.comissao.minima == null) erros.push('precificacao.comissao: comissão por margem precisa de "alvo" e "minima"');
+    if (pr.margemAlvo == null || pr.margemMinima == null) erros.push('precificacao.comissao: comissão por margem precisa de margemAlvo e margemMinima na política');
+    if (pr.comissao.alvo != null && pr.comissao.minima != null && pr.comissao.minima > pr.comissao.alvo) erros.push('precificacao.comissao: a comissão mínima é maior que a alvo');
+  }
+  if (pr.comissao?.tipo === 'fixa' && pr.comissao.alvo == null) erros.push('precificacao.comissao: comissão fixa precisa de "alvo"');
   if (p.cs.recorrente && !p.cs.periodicidadeMeses) avisos.push('cs: receita recorrente sem "periodicidadeMeses"; vou assumir 1 (mensal)');
 }

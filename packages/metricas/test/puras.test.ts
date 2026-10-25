@@ -57,7 +57,7 @@ describe('economia e canais', () => {
     expect(e.descontoSobreReferencia).toBeCloseTo(1 / 6);
     expect(e.descontoSobreAprovado).toBeCloseTo(1 / 11);
     expect(e.margemContribuicao).toBe(9000);
-    expect(e.margemPercentual).toBeCloseTo(0.9);
+    expect(e.margemPercentual).toBeCloseTo(0.9);   // sem política, nada é dedução: RL = preço e a MC % sobre a RL coincide com a % sobre o preço
   });
   it('sem preço fechado registrado, MC é nula (não zero)', () => {
     expect(economiaDaVenda({ id: 'x', valorFechado: 5000 }, []).margemContribuicao).toBeNull();

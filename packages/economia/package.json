@@ -1,0 +1,9 @@
+{
+  "name": "@lab/economia",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "dependencies": { "@lab/nucleo": "*", "postgres": "3.4.9" }
+}

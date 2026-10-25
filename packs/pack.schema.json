@@ -328,6 +328,46 @@
           "minimum": 0,
           "maximum": 1
         },
+        "custoCapitalMes": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "custosFixosMes": {
+          "type": "number",
+          "minimum": 0
+        },
+        "lucroDesejadoMes": {
+          "type": "number",
+          "minimum": 0
+        },
+        "comissao": {
+          "type": "object",
+          "properties": {
+            "tipo": {
+              "type": "string",
+              "enum": [
+                "nenhuma",
+                "fixa",
+                "por_margem"
+              ]
+            },
+            "alvo": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "minima": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          },
+          "required": [
+            "tipo"
+          ],
+          "additionalProperties": false
+        },
         "linhas": {
           "type": "array",
           "items": {
@@ -362,6 +402,23 @@
                 "type": "number",
                 "minimum": 0
               },
+              "excluir": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9][a-z0-9_-]*$"
+                }
+              },
+              "categoria": {
+                "type": "string",
+                "enum": [
+                  "cpv",
+                  "servico",
+                  "contingencia",
+                  "interno",
+                  "reserva"
+                ]
+              },
               "remover": {
                 "type": "boolean"
               }
@@ -389,6 +446,34 @@
                 "type": "number",
                 "minimum": 0,
                 "maximum": 1
+              },
+              "antecipacao": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "partes": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "fracao": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1
+                    },
+                    "dias": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 3650
+                    }
+                  },
+                  "required": [
+                    "fracao",
+                    "dias"
+                  ],
+                  "additionalProperties": false
+                }
               },
               "remover": {
                 "type": "boolean"

@@ -34,7 +34,8 @@ describe.skipIf(semBanco)('relatório no banco', () => {
     expect(r.canais).toHaveLength(1);
     expect(r.canais[0]).toMatchObject({ leads: 3, vendas: 1, receita: 10000, cpl: 1000, cac: 3000, margemContribuicao: 9000, mcMenosCac: 6000 });
     expect(r.taxaDeGanho).toMatchObject({ sucessos: 1, total: 1 });
-    expect(r.vendas.margemPercentual).toBe(0.9);
+    expect(r.vendas.margemPercentual).toBe(1);          // MC % sobre a receita líquida (10.000 − 1.000 de imposto informado = 9.000; MC 9.000)
+    expect(r.vendas.margemPercentualPreco).toBe(0.9);   // a % sobre o preço anda ao lado, nomeada
     expect(r.retencao.mrrInicial).toBeNull();
 
     /* regressão: as etapas já alcançadas chegam como lista (o driver não converte arrays do Postgres sem fetch_types) */

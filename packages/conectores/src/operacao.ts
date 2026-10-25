@@ -52,11 +52,12 @@ export async function atualizarPackDaOperacao(sql: Sql, operacaoId: string, cata
   return sql.begin(async tx => {
     await tx`update lab.operacao set pack = ${tx.json(pack as never)}, pack_versao = ${pack.versao}, ajustes = ${tx.json(aj as never)} where id = ${operacaoId}`;
     await instalarCatalogos(tx, operacaoId, pack);
-    const [ult] = await tx<{ linhas: unknown; condicoes: unknown; margem_alvo: string | null; margem_minima: string | null; desconto_maximo: string | null }[]>`
-      select linhas, condicoes, margem_alvo, margem_minima, desconto_maximo from lab.politica_preco where operacao_id = ${operacaoId} order by versao desc limit 1`;
+    const [ult] = await tx<{ linhas: unknown; condicoes: unknown; margem_alvo: string | null; margem_minima: string | null; desconto_maximo: string | null; comissao: unknown; custo_capital_mes: string | null; custos_fixos_mes: string | null; lucro_desejado_mes: string | null }[]>`
+      select linhas, condicoes, margem_alvo, margem_minima, desconto_maximo, comissao, custo_capital_mes, custos_fixos_mes, lucro_desejado_mes from lab.politica_preco where operacao_id = ${operacaoId} order by versao desc limit 1`;
     const pr = pack.precificacao;
     const mudou = !ult || estavel(ult.linhas) !== estavel(pr.linhas) || estavel(ult.condicoes) !== estavel(pr.condicoes)
-      || num(ult.margem_alvo) !== (pr.margemAlvo ?? null) || num(ult.margem_minima) !== (pr.margemMinima ?? null) || num(ult.desconto_maximo) !== (pr.descontoMaximo ?? null);
+      || num(ult.margem_alvo) !== (pr.margemAlvo ?? null) || num(ult.margem_minima) !== (pr.margemMinima ?? null) || num(ult.desconto_maximo) !== (pr.descontoMaximo ?? null)
+      || estavel(ult.comissao) !== estavel(pr.comissao ?? { tipo: 'nenhuma' }) || num(ult.custo_capital_mes) !== (pr.custoCapitalMes ?? 0) || num(ult.custos_fixos_mes) !== (pr.custosFixosMes ?? null) || num(ult.lucro_desejado_mes) !== (pr.lucroDesejadoMes ?? null);
     if (mudou) await registrarPolitica(tx, operacaoId, pack, 'atualização do pack');
     return { avisos: r.avisos, politicaNova: mudou };
   });
@@ -69,11 +70,12 @@ const estavel = (v: unknown): string => JSON.stringify(v, (_k, x) => (x && typeo
 async function registrarPolitica(tx: Tx, operacaoId: string, pack: PackResolvido, observacao: string) {
   const pr = pack.precificacao;
   await tx`
-    insert into lab.politica_preco (operacao_id, versao, margem_alvo, margem_minima, desconto_maximo, linhas, condicoes, observacao)
+    insert into lab.politica_preco (operacao_id, versao, margem_alvo, margem_minima, desconto_maximo, linhas, condicoes, observacao, comissao, custo_capital_mes, custos_fixos_mes, lucro_desejado_mes, motivo)
     values (${operacaoId},
       (select coalesce(max(versao), 0) + 1 from lab.politica_preco where operacao_id = ${operacaoId}),
       ${pr.margemAlvo ?? null}, ${pr.margemMinima ?? null}, ${pr.descontoMaximo ?? null},
-      ${tx.json(pr.linhas as never)}, ${tx.json(pr.condicoes as never)}, ${observacao})`;
+      ${tx.json(pr.linhas as never)}, ${tx.json(pr.condicoes as never)}, ${observacao},
+      ${tx.json((pr.comissao ?? { tipo: 'nenhuma' }) as never)}, ${pr.custoCapitalMes ?? 0}, ${pr.custosFixosMes ?? null}, ${pr.lucroDesejadoMes ?? null}, ${observacao})`;
 }
 
 export async function instalarCatalogos(tx: Tx, operacaoId: string, pack: PackResolvido) {
