@@ -1,3 +1,4 @@
+import type { TarefaFoto } from './fechamento.js';
 /* O contrato entre a montagem (consultas) e quem consome: ações, fotos dos rituais e a tela. */
 import type { Classe, Evidencia, Gargalo, Padrao, Quadrante, Viabilidade } from './motor.js';
 import type { ObjetivoSemana, Ritual } from './producao.js';
@@ -46,9 +47,10 @@ export interface DadosDia {
   ticket: { v: number | null; fonte: string };
   pct: number | null; pctSem: number | null; atrasoProd: number;
   sucesso: Compromisso[]; acoes: Acao[];
-  cenario: { exec: { pendencias: number; etapas: Array<{ k: string; nome: string; planejado: number; adicional: number; amanha: number; atraso: number }>; esperado: Array<{ k: string; de: number; para: string; n: number; tx: number }>; sobrecarga?: boolean }; nao: { pendencias: number; etapas: Array<{ k: string; nome: string; planejado: number; adicional: number; amanha: number; atraso: number }>; sobrecarga?: boolean; semProximo?: number }; cap: number | null };
+  cenario: { exec: { pendencias: number; tarefasAmanha?: number; etapas: Array<{ k: string; nome: string; planejado: number; adicional: number; amanha: number; atraso: number }>; esperado: Array<{ k: string; de: number; para: string; n: number; tx: number }>; sobrecarga?: boolean }; nao: { pendencias: number; tarefasAmanha?: number; etapas: Array<{ k: string; nome: string; planejado: number; adicional: number; amanha: number; atraso: number }>; sobrecarga?: boolean; semProximo?: number }; cap: number | null };
   esperadoAgora: Array<{ k: string; esperado: number; feito: number; status: 'em_dia' | 'atencao' | 'atras' | null }>;
   fontes: Record<string, boolean>;   // o que a V2 ainda não tem aparece como false ("sem fonte"), nunca como zero
+  tarefas: { hoje: TarefaFoto[]; atrasadas: TarefaFoto[]; amanha: number; feitasHoje: number; feitasHojePrazoHoje: number };
   notas: { justificativas: Record<string, { motivo: string; terceiro: boolean; por: string | null; em: string }>; feitos: Record<string, { por: string | null; em: string }> };
   memoria: Array<{ data: string; ritual: Ritual; alvo: number; feito: number | null; pct: number | null; acoes: number; criticas: number; justificativas: number }>;
 }

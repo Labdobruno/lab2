@@ -45,6 +45,31 @@ function seletoresDia(time,quem){
   return [el('div',{class:'barra'},[sel]),rit];
 }
 function fonteEvid(b){return b&&b.e?el('span',{class:'chip sem mini',texto:EVID[b.e]||b.e}):null}
+/* ---------- tarefas da pessoa: atrasadas, de hoje, nova ---------- */
+function tfBase(){return '/admin/operacoes/'+encodeURIComponent(estado.slug)+'/tarefas'}
+function tfLinha(t,recarregar){
+  var atraso=t.diasAtraso>0?el('span',{class:'chip critica',texto:t.diasAtraso+' d de atraso'}):null;
+  var adi=t.adiamentos>0?el('span',{class:'chip '+(t.adiamentos>=2?'alta':'atencao'),texto:'adiada '+t.adiamentos+'×'}):null;
+  var terc=t.terceiro?el('span',{class:'chip sem',texto:'depende de terceiro'}):null;
+  return el('li',{class:'compromisso'},[el('span',{},[el('strong',{texto:t.titulo}),el('span',{class:'suave mini',texto:' · prazo '+data(t.prazo)+(t.prazoOriginal&&t.prazoOriginal!==t.prazo?' (era '+data(t.prazoOriginal)+')':'')+(t.negNome?' · '+t.negNome:'')}),' ',atraso,' ',adi,' ',terc,
+    el('span',{class:'barra'},[lk('Feita',async function(){try{await api(tfBase()+'/'+t.id+'/concluir',{});recarregar('Tarefa concluída.',true)}catch(e){recarregar(e.message)}}),
+      lk('Adiar',async function(){var pz=prompt('Novo prazo (AAAA-MM-DD):',t.prazo);if(!pz)return;var mo=prompt('Por quê? (adiar conta: o desvio não some)');if(mo==null)return;var tc=confirm('Depende de terceiro? (OK = sim)');try{await api(tfBase()+'/'+t.id+'/adiar',{prazo:pz,motivo:mo,terceiro:tc});recarregar('Tarefa adiada.',true)}catch(e){recarregar(e.message)}}),
+      lk('Cancelar',async function(){var mo=prompt('Motivo do cancelamento:');if(!mo)return;try{await api(tfBase()+'/'+t.id+'/cancelar',{motivo:mo});recarregar('Tarefa cancelada.',true)}catch(e){recarregar(e.message)}})])])])}
+function cartaoTarefas(D,quem){
+  var T=D.tarefas||{hoje:[],atrasadas:[],amanha:0,feitasHoje:0};
+  var recarregar=function(m,ok){estado.pessoaDia=quem;telaDia(m,ok)};
+  var tit=el('input',{class:'largo',placeholder:'o que fazer',maxlength:'200','aria-label':'Título da tarefa'}),pz=el('input',{type:'date',value:D.ciclo.amanha||D.data,'aria-label':'Prazo da tarefa'});
+  var nova=el('details',{class:'mini'},[el('summary',{texto:'Nova tarefa para '+D.pessoa.nome}),el('p',{},[tit]),el('p',{class:'barra'},[pz,lk('Criar',async function(){try{await api(tfBase(),{titulo:tit.value,prazo:pz.value,responsavelId:D.pessoa.id,origem:{tipo:'manual'}});recarregar('Tarefa criada.',true)}catch(e){recarregar(e.message)}})])]);
+  var filhos=[el('h2',{texto:'Tarefas'})];
+  if(!T.atrasadas.length&&!T.hoje.length)filhos.push(el('p',{class:'suave',texto:'Nenhuma tarefa aberta até hoje'+(T.amanha?'; '+T.amanha+' para amanhã':'')+(T.feitasHoje?'; '+T.feitasHoje+' concluída(s) hoje':'')+'.'}));
+  if(T.atrasadas.length)filhos.push(el('p',{class:'mini'},[el('strong',{texto:'Atrasadas ('+T.atrasadas.length+'). '}),'Reagendar não apaga o desvio: adiada duas vezes vira decisão do gestor.']));
+  if(T.atrasadas.length)filhos.push(el('ul',{class:'compromissos'},T.atrasadas.map(function(t){return tfLinha(t,recarregar)})));
+  if(T.hoje.length)filhos.push(el('p',{class:'mini'},[el('strong',{texto:'Para hoje ('+T.hoje.length+')'})]));
+  if(T.hoje.length)filhos.push(el('ul',{class:'compromissos'},T.hoje.map(function(t){return tfLinha(t,recarregar)})));
+  if((T.atrasadas.length||T.hoje.length)&&(T.amanha||T.feitasHoje))filhos.push(el('p',{class:'suave mini',texto:(T.feitasHoje?T.feitasHoje+' concluída(s) hoje':'')+(T.feitasHoje&&T.amanha?' · ':'')+(T.amanha?T.amanha+' para amanhã':'')}));
+  filhos.push(nova);
+  return el('div',{class:'cartao'},filhos);
+}
 async function telaDiaPessoa(time,quem,msg,ok){
   var D,fotos;
   try{D=await api(diaBase()+'/dia'+diaQs(['pessoa='+quem]));fotos=await api(diaBase()+'/dia/fotos?pessoa='+quem+(estado.data?'&data='+estado.data:''))}
@@ -77,6 +102,7 @@ async function telaDiaPessoa(time,quem,msg,ok){
     app.appendChild(el('div',{class:'cartao'},blocos));
   }
   /* 3. ações do dia, na ordem crítica → estratégica */
+  app.appendChild(cartaoTarefas(D,quem));
   if(D.acoes.length)app.appendChild(el('div',{class:'cartao'},[el('h2',{texto:D.ritual==='fim'?'O que estava previsto':'Ações de hoje'}),el('p',{class:'suave mini',texto:'Cada ação diz por quê, o que acontece se não fizer e como medir. Abra para ver.'})].concat(D.acoes.map(function(a){return cartaoAcao(D,a)}))));
   /* 4. amanhã (tarde e fim) e ontem (manhã) */
   if(D.ritual!=='manha'&&D.cenario.exec.etapas.length)app.appendChild(cartaoAmanha(D));
@@ -215,6 +241,6 @@ async function telaDiaEquipe(time,msg,ok){
   if(E.sistemico.length)app.appendChild(el('div',{class:'cartao'},[el('h2',{texto:'Gargalo da equipe (não é de uma pessoa)'})].concat(E.sistemico.map(function(s){return el('p',{texto:s.nome+': '+s.pessoas.join(', ')})}))));
   if(E.oportunidades.length)app.appendChild(el('details',{},[el('summary',{texto:E.oportunidades.length+' negócio(s) em alerta · exposição '+reais(E.exposicao)})].concat(E.oportunidades.map(function(c){return el('p',{class:'mini'},[el('span',{class:'chip '+c.classe,texto:CLASSE_N[c.classe]}),' '+c.nome+' ('+c.pessoa+') · '+c.etapa+(c.valor?' · '+reais(c.valor):'')+' · '+c.acao])}))));
   if(E.semDono)app.appendChild(el('p',{class:'erro mini',texto:E.semDono+' lead(s) do ciclo sem dono: não entram no plano de ninguém.'}));
-  app.appendChild(el('p',{class:'suave mini',texto:'Sem fonte na V2: tarefas, agenda e cadência. Regras '+E.versaoRegras+'.'}));
+  app.appendChild(el('p',{class:'suave mini',texto:'Sem fonte na V2: agenda e cadência. Regras '+E.versaoRegras+'.'}));
 }
 `;

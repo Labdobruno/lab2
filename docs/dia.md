@@ -54,7 +54,11 @@ Cada ritual pode ser **registrado**: uma foto do plano (alvos, feito, compromiss
 
 ## O que ainda não entrou (próximas ondas)
 
-Tarefas e agenda (compromissos com hora), cadência por canal, próximo passo por negócio, pipeline de vendas por pessoa, metas por canal. Quando houver fonte, entram pelos mesmos campos (`fontes`), sem mudar as regras.
+Agenda (compromissos com hora), cadência por canal, próximo passo por negócio, pipeline de vendas por pessoa, metas por canal. Quando houver fonte, entram pelos mesmos campos (`fontes`), sem mudar as regras.
+
+## Tarefas (Onda 7)
+
+A tarefa é a ação com responsável e prazo. Nasce de um clique do gestor: no canvas de um achado (Inteligência), num alerta do Fechamento do dia, ou no cartão **Tarefas** do Dia da pessoa. Sem responsável, é do gestor. Adiar exige motivo, conta e guarda o prazo original: adiada duas vezes vira classe "decisão" na pendência do Fechamento; "depende de terceiro" vira bloqueio, não falta de execução. Concluir e cancelar são finais; tudo fica em `lab.tarefa_evento` (só acréscimo). No plano do dia, as atrasadas e as de hoje entram nas pendências do cenário "se não fizer" e as de amanhã na carga de amanhã. Nada vira tarefa sozinho.
 
 ---
 

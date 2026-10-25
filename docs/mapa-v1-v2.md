@@ -39,7 +39,7 @@ Três estados nunca se misturam em nenhuma tela: **REALIZADO, PROJETADO e SIMULA
 
 ## 3. Mapa por área
 
-Legenda: **Cobre** = a V2 faz o equivalente. **Raso** = existe, faz bem menos (ou com erro). **Falta** = não existe.
+Legenda: **Cobre** = a V2 faz o equivalente. **Raso** = existe, faz bem menos (ou com erro). **Falta** = não existe. **Atualizado em 25/10/2026:** as ondas 1 a 7 (`docs/roteiro.md`) cobriram o que estava como Falta ou Raso; a coluna final diz em qual onda. Tarefas a partir de sinal e achado: Onda 7.
 
 ### 3.1 Planejar o mês (frente A)
 
@@ -49,27 +49,27 @@ Legenda: **Cobre** = a V2 faz o equivalente. **Raso** = existe, faz bem menos (o
 | Build-up reverso exato: calcula em fração e arredonda só no total de cada pessoa; taxa por canal e por pessoa (precedência: premissa da pessoa → do canal → histórico da pessoa → do canal → geral); canal-filho herda do pai; canais que não geram lead; pré-venda do closer vai para o SDR | `ceil` em cada degrau, taxa única, sem canal/pessoa | **Raso, com erro conhecido** |
 | Metas diárias inteiras que somam exatamente a meta do mês (`floor(T(k+1)/du) − floor(Tk/du)`), mínimo de 1 por dia na etapa principal | `ceil(meta/dias)` por dia; a soma passa da meta (22 em 5 dias dá 25) | **Raso, com erro** |
 | Esperado até hoje: **hoje conta meio dia**, ausência por pessoa, peso por semana, corte de vigência (replanejar) | Linear, hoje conta inteiro, sem ausência, sem peso | Raso |
-| **Projeção do ciclo** (4 projeções: planejada, ritmo atual, histórica, ajustada) e **chance de bater a meta** (Poisson); negócio acima de 5× o ticket fica fora da conta | Não existe | **Falta** |
+| **Projeção do ciclo** (4 projeções: planejada, ritmo atual, histórica, ajustada) e **chance de bater a meta** (Poisson); negócio acima de 5× o ticket fica fora da conta | Não existe | **Cobre** (Onda 2) |
 | Sinais, incidentes por zona do funil, veredito conjunto (7 frases), "classe do desvio" (impede chamar baixa conversão de falta de esforço); botão cria tarefa | Achados por hipótese cobrem uma parte; sem veredito, sem tarefa | Raso |
 | Cenários por premissa (ticket, margem, leads, pipeline, taxas) em %, com justificativa; conservador = limite inferior de Wilson 95%; sensibilidade ±10%; conflito de margem | ±15% em todas as taxas | **Raso, conceito oposto** |
-| Capacidade e viabilidade: necessário × viável × déficit; a meta nunca é cortada, mostra alternativas | Não existe | **Falta** |
-| Replanejar com data de corte e motivo (cria v2, preserva v1 e o original) | Não existe | **Falta** |
+| Capacidade e viabilidade: necessário × viável × déficit; a meta nunca é cortada, mostra alternativas | Não existe | **Cobre** (Onda 3) |
+| Replanejar com data de corte e motivo (cria v2, preserva v1 e o original) | Não existe | **Cobre** (Onda 3) |
 | Programa de ciclos (2 a 6 ciclos): meta original congelada + meta vigente que redistribui sobra e falta | Divide uma vez por pesos, sem rebalancear | Raso |
 | Equipe: função, peso, capacidade por dia, ausências, canais pré-venda/venda, indicador de sucesso | Só a função | Raso |
 | Hipóteses do mês com estados e veredito automático | Experimentos com baseline/alvo | Parcial |
-| **Relatório da última semana** (deu certo/errado, por pessoa e canal, causas "compatíveis com", roteiro de testes, texto para colar no WhatsApp) e **Projeção da semana** (ritmo, faixa, "na mesa para fechar") | Não existe | **Falta** |
-| Decomposição da receita (volume × conversão × ticket), comparação com ciclo anterior e do ano anterior, defasagem leads→vendas | Não existe | **Falta** |
+| **Relatório da última semana** (deu certo/errado, por pessoa e canal, causas "compatíveis com", roteiro de testes, texto para colar no WhatsApp) e **Projeção da semana** (ritmo, faixa, "na mesa para fechar") | Não existe | **Cobre** (Onda 2) |
+| Decomposição da receita (volume × conversão × ticket), comparação com ciclo anterior e do ano anterior, defasagem leads→vendas | Não existe | **Cobre** (Onda 6) |
 | CPL, CAC, ROI por canal com rateio do investimento pelos dias do ciclo; mês sem investimento lançado = "incompleto" | CPL, CAC, ROI e payback por canal (mensal) | Cobre (falta o rateio e o "incompleto") |
 
 ### 3.2 O dia a dia (frente F)
 
 | O que a V1 faz | V2 hoje | |
 |---|---|---|
-| **Fechamento do dia** às 17h30: relatório gravado, imutável, com complemento às 23h30, decisões do gestor e recorrência (o mesmo alerta 3 relatórios seguidos sobe de nível) | Texto de 3 a 4 frases calculado na hora, não grava | **Falta** (só o nome é igual) |
-| Worker automático com trava contra duplicidade, tentativas e auditoria; sino "o fechamento de hoje não saiu" | Cron de 15 min só sincroniza conectores | **Falta** |
+| **Fechamento do dia** às 17h30: relatório gravado, imutável, com complemento às 23h30, decisões do gestor e recorrência (o mesmo alerta 3 relatórios seguidos sobe de nível) | Texto de 3 a 4 frases calculado na hora, não grava | **Cobre** (Onda 2) |
+| Worker automático com trava contra duplicidade, tentativas e auditoria; sino "o fechamento de hoje não saiu" | Cron de 15 min só sincroniza conectores | **Cobre** (Onda 2) |
 | Contingência em 4 níveis (100/90/75% e crítico), 3 critérios, alvo de recuperação por pessoa e por dia que fecha exatamente a meta, ações sugeridas | `ceil(falta/restantes)`, viável até 1,5× da meta planejada | Raso |
-| Plano do dia da pessoa (alvo de hoje, viabilidade, capacidade) | Não existe | **Falta** |
-| Situação da pessoa em 6 estados ("sem registro" ≠ "não executou"), diagnóstico atividade × resultado, causa sistêmica | Só o status de ritmo | **Falta** |
+| Plano do dia da pessoa (alvo de hoje, viabilidade, capacidade) | Não existe | **Cobre** (Onda 1) |
+| Situação da pessoa em 6 estados ("sem registro" ≠ "não executou"), diagnóstico atividade × resultado, causa sistêmica | Só o status de ritmo | **Cobre** (Onda 2) |
 
 ### 3.3 Quarter, objetivos e metas (frente B)
 
@@ -100,12 +100,12 @@ A V1 gera um relatório de **13 seções**, imutável e versionado (r1; r2 e r3 
 |---|---|---|
 | 20 hipóteses como dados (10 universais + 10 do pack solar), cada uma com condições de 6 parâmetros (janela, base, limiar, banda, amostra mínima, **histerese**), **rivais**, "dado que distingue", intervenções e impacto em R$ | 10 hipóteses (8 no base + 2 na licitação), condição e impacto em fórmula de texto | Raso |
 | Prioridade = impacto × confiança × aderência ÷ esforço; orçamento de atenção de 5; achados compostos | Ordena por R$, depois severidade; orçamento de 3 | Raso |
-| Marcas "aceito / não procede" com validade (voltam se o impacto passar de 1,5×); diário de contexto (reajuste, saída de vendedor, campanha); histerese de 14 dias | Não existe | **Falta** |
+| Marcas "aceito / não procede" com validade (voltam se o impacto passar de 1,5×); diário de contexto (reajuste, saída de vendedor, campanha); histerese de 14 dias | Não existe | **Cobre** (Onda 6) |
 | Canvas de decisão com 10 blocos; ciclo de vida da regra (rascunho, sombra, ativa, aposentada) | Decisão simples + experimento | Raso |
 | Dicionário de ~50 métricas como contrato; grafo de 27 relações entre métricas; níveis de inferência que travam o verbo ("compatível com", nunca "causou") | Dicionário de 16 métricas | Raso |
-| Forecast do mês por etapa × prazo; acurácia do forecast (erro, viés); foto diária do servidor | Não existe | **Falta** |
-| Benchmark entre vendedores (mediana, p75), **receita potencial** se a etapa chegasse ao benchmark, transferência de performance ("e se a Ana tivesse a conversão do Pedro") | Não existe | **Falta** |
-| Drill-down (vendedor, origem, mês, tipo) e lista dos leads por trás de cada número | Não existe | **Falta** |
+| Forecast do mês por etapa × prazo; acurácia do forecast (erro, viés); foto diária do servidor | Não existe | **Cobre** (Onda 6) |
+| Benchmark entre vendedores (mediana, p75), **receita potencial** se a etapa chegasse ao benchmark, transferência de performance ("e se a Ana tivesse a conversão do Pedro") | Não existe | **Cobre** (Onda 6) |
+| Drill-down (vendedor, origem, mês, tipo) e lista dos leads por trás de cada número | Não existe | **Cobre** (Onda 6) |
 | Funil por coorte com Wilson; Wilson como estatística | Existe | Cobre |
 
 ### 3.6 Studio, GTM e construtor (frente D)
@@ -115,9 +115,9 @@ A V1 gera um relatório de **13 seções**, imutável e versionado (r1; r2 e r3 
 | O que a V1 faz | V2 hoje | |
 |---|---|---|
 | **GTM & Revenue Studio**: editor visual (arrastar, conectar, zoom) com 8 tipos de bloco; cada bloco ligado ao CRM (7 tipos de vínculo, taxa vem de **coorte** com Wilson); retornos com limite de voltas; capacidade que vira fila; defasagem por conexão | Grafo com 3 tipos, sem editor visual, sem vínculo, sem capacidade, sem retorno; o "observado" conta **fluxo**, erro que a V1 evitou de propósito | Raso |
-| Cálculo direto **e reverso** (alvo de resultado → quanto precisa entrar, com capacidade e limite da fonte) | Só direto | **Falta** o reverso |
+| Cálculo direto **e reverso** (alvo de resultado → quanto precisa entrar, com capacidade e limite da fonte) | Só direto | **Cobre** (Onda 5) |
 | Cenários nomeados, sensibilidade, natureza de cada premissa (histórico / premissa / benchmark / estimativa / hipótese) | Alavanca fixa de +5 pontos | Raso |
-| **Publicar** o modelo como plano oficial imutável com validade; **monitor** planejado × realizado por bloco e conexão com estados (dentro, atenção, fora, insuficiente), diagnósticos com R$, ação que vira tarefa e é avaliada antes e depois | Não existe | **Falta** (é o maior bloco do Studio) |
+| **Publicar** o modelo como plano oficial imutável com validade; **monitor** planejado × realizado por bloco e conexão com estados (dentro, atenção, fora, insuficiente), diagnósticos com R$, ação que vira tarefa e é avaliada antes e depois | Não existe | **Cobre** (Onda 5) |
 | **Campanhas**: briefing de ~45 campos, funil próprio, 10 critérios de prontidão (sem "nota de probabilidade"), aprovação, decisão pós-teste (continuar, corrigir ou encerrar) com aprendizado | Projeção financeira simples (correta), plano × realizado | Raso (a projeção é boa; falta o resto) |
 | **Construtor de hipóteses**: pergunta em frase ("Se o X do closer fosse igual à mediana, qual seria o impacto em margem/caixa?") sobre uma árvore marketing → funil → receita → margem → caixa → ponto de equilíbrio | Não existe | **Falta, o maior buraco desta frente** |
 

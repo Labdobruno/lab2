@@ -208,6 +208,21 @@ describe.skipIf(semBanco)('API', () => {
     expect((await chamar('GET', '/admin/operacoes/nao-existe/studio/observado')).status).toBe(404);
   });
 
+  it('tarefas pela API', async () => {
+    await chamar('POST', '/admin/operacoes', { slug: 'tf', nome: 'Tarefas', packId: 'base' });
+    const p = await (await chamar('POST', '/admin/operacoes/tf/pessoas', { nome: 'Ana', funcao: 'closer' })).json() as any;
+    expect((await chamar('POST', '/admin/operacoes/tf/tarefas', { titulo: 'x', prazo: '2026-10-20' })).status).toBe(400);
+    const r = await chamar('POST', '/admin/operacoes/tf/tarefas', { titulo: 'Revisar as propostas paradas', prazo: '2026-10-20', responsavelId: p.id, origem: { tipo: 'achado', chave: 'pipeline_parado' } }, { 'x-lab-por': 'Bruno' });
+    expect(r.status).toBe(201); const t = await r.json() as any; expect(t).toMatchObject({ responsavel: 'Ana', por: 'Bruno', origem: { tipo: 'achado', chave: 'pipeline_parado' } });
+    expect(((await (await chamar('GET', '/admin/operacoes/tf/tarefas?status=aberta')).json()) as any[]).length).toBe(1);
+    expect(((await (await chamar('POST', `/admin/operacoes/tf/tarefas/${t.id}/adiar`, { prazo: '2026-10-22', motivo: 'cliente pediu mais prazo', terceiro: true })).json()) as any).adiamentos).toBe(1);
+    expect((await chamar('POST', `/admin/operacoes/tf/tarefas/${t.id}/adiar`, { prazo: '2026-10-21', motivo: 'x' })).status).toBe(400);
+    const um = await (await chamar('GET', `/admin/operacoes/tf/tarefas/${t.id}`)).json() as any; expect(um.eventos.map((e: any) => e.tipo)).toEqual(['criada', 'adiada']);
+    expect(((await (await chamar('POST', `/admin/operacoes/tf/tarefas/${t.id}/concluir`, {})).json()) as any).status).toBe('feita');
+    expect((await chamar('POST', `/admin/operacoes/tf/tarefas/${t.id}/cancelar`, { motivo: 'já era' })).status).toBe(409);
+    expect((await chamar('GET', '/admin/operacoes/tf/tarefas/nao-e-uuid')).status).toBe(404);
+  });
+
   it('inteligência v3 e pessoas pela API', async () => {
     await chamar('POST', '/admin/operacoes', { slug: 'in6', nome: 'Int 6', packId: 'base' });
     const R = await (await chamar('GET', '/admin/operacoes/in6/inteligencia?data=2026-10-24')).json() as any;

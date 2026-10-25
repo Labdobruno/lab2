@@ -87,7 +87,7 @@ describe.skipIf(semBanco)('plano do dia no banco', () => {
     const acProd = D.acoes.find(x => x.chave === 'prod:tentativa')!;
     expect(acProd.nao).toMatch(/Amanhã o alvo vira/);
     expect(D.sucesso.map(s => s.k)).toEqual(expect.arrayContaining(['prod:tentativa', 'leadsnovos', 'sem:agendamento']));
-    expect(D.fontes.tarefas).toBe(false);
+    expect(D.fontes.tarefas).toBe(true); expect(D.tarefas.hoje).toEqual([]);
     expect(D.cap.fonte).toBe('observada'); expect(D.cap.v).toBe(10);
     expect(D.memoria).toEqual([]);
   });
@@ -268,7 +268,7 @@ describe.skipIf(semBanco)('fechamento do dia no banco', () => {
     expect(R.integro).toBe(true); expect(R.original.resumo.status).toBeDefined(); expect(R.original.ref.hash).toBe(R.assinatura);
     const cc = R.original.comparacoes.find((c: any) => c.k === 'tentativa' && c.periodo === 'dia'); expect(cc.realizado).toBe(3); expect(cc.previsto).toBeGreaterThan(3);
     expect(R.original.pessoas[0]).toMatchObject({ n: 'Sara', sit: 'falta_execucao' });
-    expect(R.original.limitacoes.some((l: any) => /Tarefas não está disponível/.test(l.txt))).toBe(true);
+    expect(R.original.limitacoes.some((l: any) => /Agenda não está disponível/.test(l.txt))).toBe(true); expect(R.original.limitacoes.some((l: any) => /Tarefas/.test(l.txt))).toBe(false);
     expect(R.original.metas[0].obj).toMatch(/Receita de ciclo/);
     expect((await tiqueFechamento(sql, op, AGORA(23, 17, 45))).status).toBe('nada');
     expect((await gerarFechamento(sql, op, AGORA(23, 18, 0), 'manual', 'bruno')).status).toBe('sem_mudanca');

@@ -2,6 +2,7 @@
    Fonte única do "feito": realizados() do planejamento (atividades, negócios ganhos, transições) + lançamentos do administrador.
    O que a V2 ainda não modela (tarefas, agenda, cadência, próximo passo) aparece em `fontes` como false: "sem fonte", nunca zero. */
 import type { Sql } from 'postgres';
+import { tarefasPorPessoa, type TarefasDoDia } from './tarefas.js';
 import { assinar } from '@lab/ciclos';
 import { cicloDaOperacao, diaDaSemana, realizados, metasVigentes, somarDias, type Operacao } from '@lab/planejamento';
 import { acoesDoDia, compromissos, etapaCenario } from './acoes.js';
@@ -31,6 +32,7 @@ export interface ContextoDia {
   notas: Map<string, { justificativas: DadosDia['notas']['justificativas']; feitos: DadosDia['notas']['feitos'] }>;
   fotos: Foto[];
   ticket: { v: number | null; fonte: string };
+  tarefas: Map<string, TarefasDoDia>;   // por pessoa ('gestor' para as sem responsável)
 }
 
 export async function contextoDoDia(sql: Sql, op: Operacao, data: string, ritual: Ritual, agora: Date): Promise<ContextoDia> {
@@ -78,9 +80,10 @@ export async function contextoDoDia(sql: Sql, op: Operacao, data: string, ritual
   }
   const mr = metas.find(m => !m.pessoaId && m.indicador === 'receita')?.valor, mv = metas.find(m => !m.pessoaId && m.indicador === 'vendas')?.valor;
   const ticket = mr && mv ? { v: mr / mv, fonte: 'meta de receita ÷ meta de vendas do ciclo' } : vendas12[0]?.n ? { v: Number(vendas12[0].media), fonte: `média das ${vendas12[0].n} vendas dos últimos 12 meses` } : { v: null, fonte: 'sem vendas nos últimos 12 meses' };
+  const tarefas = await tarefasPorPessoa(sql, op, data, ciclo.uteis.find(d => d > data) ?? null);
   return { op, data, ritual, agora, fracao: FRACAO_DO_DIA[ritual], crit, diarias: diarias.length ? diarias : ['tentativa'], ciclo, pessoas, ausencias, metas, feito, ajustes,
     negocios: negs.map(n => ({ ...n, valor: Number(n.valor), criado_em: new Date(n.criado_em).toISOString(), etapa_desde: n.etapa_desde ? new Date(n.etapa_desde).toISOString() : null, ultima_atividade: n.ultima_atividade ? new Date(n.ultima_atividade).toISOString() : null })),
-    pv, notas, fotos: fotosL.map(f => ({ pessoa_id: f.pessoa_id, data: f.data, ritual: f.ritual, dados: f.dados })), ticket };
+    pv, notas, fotos: fotosL.map(f => ({ pessoa_id: f.pessoa_id, data: f.data, ritual: f.ritual, dados: f.dados })), ticket, tarefas };
 }
 
 const segunda = (iso: string) => somarDias(iso, -((diaDaSemana(iso) + 6) % 7));
@@ -169,6 +172,7 @@ export function montarPessoa(ctx: ContextoDia, p: Pessoa): DadosDia {
   const esperadoAgora = prod.filter(x => x.metaTotal > 0).map(x => { const esp = esperadoAteAgora(x.metaTotal, uteis, hoje, ctx.fracao), r = esp > 0 ? x.feitoCiclo / esp : null;
     return { k: x.k, esperado: Math.round(esp * 100) / 100, feito: x.feitoCiclo, status: r == null ? null : r >= 1 ? ('em_dia' as const) : r >= crit.pctOk ? ('atencao' as const) : ('atras' as const) }; });
   const notasP = ctx.notas.get(p.id) ?? { justificativas: {}, feitos: {} };
+  const T: TarefasDoDia = ctx.tarefas.get(p.id) ?? { hoje: [], atrasadas: [], amanha: 0, feitasHoje: 0, feitasHojePrazoHoje: 0 };
   const base = {
     pessoa: { id: p.id, nome: p.nome, funcao: p.funcao, funcaoNome: FUNCAO_NOME[p.funcao ?? ''] ?? '' },
     data, ritual: ctx.ritual, fracaoHoje: ctx.fracao, versaoRegras: VERSAO_REGRAS,
@@ -176,11 +180,11 @@ export function montarPessoa(ctx: ContextoDia, p: Pessoa): DadosDia {
     semana: { ini: semIni, fim: semFim, restantes: W[ctx.diarias[0] ?? 'tentativa']?.restantes ?? uteis.filter(d => d >= hoje && d <= semFim).length },
     cap, prod, quad, quadAt: at, quadRs: rs, viab, tx, txPlano, vol, volH, cards, exposicao, leadsNovos, padrao, serie, ontem: { prod: ontemProd }, garg, ticket: ctx.ticket,
     pct: alvoT > 0 ? feitoT / alvoT : null, pctSem: wa > 0 ? wP.reduce((a, w) => a + Math.min(w.feito, w.alvo), 0) / wa : null, atrasoProd: prod.reduce((a, x) => a + x.atraso, 0),
-    esperadoAgora, fontes: { tarefas: false, agenda: false, cadencia: false, proximoPasso: false, pipeline: false },
-    notas: notasP,
+    esperadoAgora, fontes: { tarefas: true, agenda: false, cadencia: false, proximoPasso: false, pipeline: false },
+    notas: notasP, tarefas: T,
   };
   const acoes = acoesDoDia(base, 'você'), sucesso = compromissos(base);
-  const cen = cenarios({ etapas: prod.filter(x => x.diario).map(x => etapaCenario(base, x)), pend: { semProximo: 0 }, amanha: {}, cap: cap.v });
+  const cen = cenarios({ etapas: prod.filter(x => x.diario).map(x => etapaCenario(base, x)), pend: { semProximo: 0, tarefasVencidas: T.atrasadas.length, tarefasHoje: T.hoje.length }, amanha: { tarefas: T.amanha }, cap: cap.v });
   const memoria = memoriaDe(ctx, p.id, kPad);
   return { ...base, acoes, sucesso, cenario: { exec: cen.exec, nao: cen.nao, cap: cen.cap }, memoria };
 }

@@ -118,3 +118,9 @@ Cada decisão tem o porquê, para não ser refeita sem motivo.
 - **Uma observação por mudança de estado.** A saúde conta disparos reais, não execuções do cron.
 - **Benchmark é quartil superior de quem tem amostra.** Receita potencial é efeito isolado por etapa e a tela diz "simulada, não garantida".
 - **Associação não é causa.** Alertas, matriz e canvas repetem a frase; a inferência trava o verbo pelo nível de evidência.
+
+## Onda 7: tarefas
+
+- **Nada vira tarefa sozinho.** Achado, alerta e pendência oferecem o botão; a tarefa só existe depois do clique do gestor (regra da V1: "nenhuma tarefa é criada sozinha").
+- **Reagendar não apaga o desvio.** Adiar exige motivo, conta e guarda o prazo original; duas vezes vira decisão do gestor no Fechamento.
+- **Sem responsável é do gestor.** A tela do Fechamento e a da Inteligência criam para o gestor; a atribuição ao time é feita no Dia da pessoa, onde a carga aparece.

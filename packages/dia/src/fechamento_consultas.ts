@@ -39,13 +39,13 @@ export async function fotografiaDoDia(sql: Sql, op: Operacao, data: string, agor
       n: p.nome, funcaoNome: D.pessoa.funcaoNome, trabalha: D.ciclo.trabalhaHoje,
       prod: D.prod.filter(x => x.metaTotal > 0 || x.feitoCiclo > 0).map(x => ({ k: x.k, nome: x.nome, metaHoje: x.metaHoje, alvo: x.alvo, feito: x.feito, falta: x.falta, atraso: x.atraso, recup: x.recup, janela: x.janela, diario: x.diario, metaCiclo: x.metaCiclo, feitoCiclo: x.feitoCiclo, metaAmanha: x.metaAmanha })),
       semana: D.prod.filter(x => !x.diario && x.sem && x.sem.alvo > 0).map(x => ({ k: x.k, alvo: x.sem!.alvo, feito: x.sem!.feito })),
-      tarefas: { hoje: [], atrasadas: [], feitasHoje: 0, feitasHojePrazoHoje: 0 }, reunioes: [],
+      tarefas: { hoje: D.tarefas.hoje, atrasadas: D.tarefas.atrasadas, feitasHoje: D.tarefas.feitasHoje, feitasHojePrazoHoje: D.tarefas.feitasHojePrazoHoje }, reunioes: [],
       avancos: avL.filter(a => a.dono_id === p.id).map(a => { const k = PAPEL_AVANCO[a.papel]!; return { k, neg: a.neg, nome: a.nome, ...(k === 'vendas' ? { valor: Number(a.valor_fechado ?? 0) } : {}), txt: TXT_AVANCO[k] + ': ' + a.nome }; }),
       registrosHoje: Object.values(hojeFeito).reduce((s, v) => s + (v > 0 ? 1 : 0), 0),
       plano: { registrado: registrada.has(p.id), justificadas: J.length, justTerceiro: J.filter(j => j.terceiro).length, feitos: Object.keys(D.notas.feitos).length },
       quad: { tipo: D.quad.tipo, tit: D.quad.tit, txt: D.quad.txt }, viab: D.viab ? { st: D.viab.st, txt: D.viab.txt } : null, capFonte: D.cap.fonte ?? '',
       padrao: { recorrente: D.padrao.recorrente, abaixo: D.padrao.abaixo, n: D.padrao.n, k: D.padrao.k }, garg: D.garg.slice(0, 3).map(g => ({ chave: g.chave, nome: g.nome, real: g.real, ref: g.ref, refTxt: g.refTxt, conf: g.conf, evid: g.evid, causas: g.causas ?? [], falta: g.falta ?? '', teste: g.teste ?? '' })),
-      amanha: { iso: D.ciclo.amanha, cap: D.cap.v, metaContatos: pd?.metaAmanha ?? 0, atrasoContatos: pd ? Math.ceil(((pd.atraso || 0) + (pd.falta || 0)) / Math.max(1, pd.janela || 1)) : 0 },
+      amanha: { iso: D.ciclo.amanha, cap: D.cap.v, tarefas: D.tarefas.amanha, metaContatos: pd?.metaAmanha ?? 0, atrasoContatos: pd ? Math.ceil(((pd.atraso || 0) + (pd.falta || 0)) / Math.max(1, pd.janela || 1)) : 0 },
       cards: D.cards.filter(x => x.classe !== 'normal').slice(0, 8).map(x => ({ id: x.id, nome: x.nome, etapa: x.etapa, classe: x.classe, motivos: x.motivos, valor: x.valor, ve: x.ve })), exposicao: D.exposicao,
     };
   });
@@ -54,7 +54,7 @@ export async function fotografiaDoDia(sql: Sql, op: Operacao, data: string, agor
   const corte = agora.getTime(), hm = agoraLocal(op.fuso, agora).hm;
   return {
     data, corte, corteHora: hm, fuso: op.fuso, geradoEm: corte, versaoPlano: VERSAO_REGRAS, plano: { status: temMetas ? 'ativo' : 'sem_plano' }, crit: { pctOk: ctx.crit.pctOk, minN: ctx.crit.minN },
-    fontes: { avisos: opts.avisos ?? [], indisponiveis: ['Tarefas', 'Agenda', 'Cadência'] }, pessoas,
+    fontes: { avisos: opts.avisos ?? [], indisponiveis: ['Agenda', 'Cadência'] }, pessoas,
     equipe: { sistemicos: sistemico(porP, Math.max(2, Math.ceil(vendedores.length / 2))),
       mes: C.metas.receita != null || C.metas.vendas != null ? { nome: 'ciclo de ' + C.ciclo.inicio, meta: C.metas.receita ?? null, realizado: C.realizado.receita ?? 0, esperado: C.metas.receita != null ? (C.linhas.find(l => l.ind === 'receita')?.esp ?? null) : null, projecao: C.proj.receita.ajust, vendas: { meta: C.metas.vendas ?? null, real: C.realizado.vendas ?? 0, proj: C.proj.vendas.ajust },
         sinais: C.sinais.map(s => ({ origem: s.origem, ind: s.ind ?? '', grav: s.grav, tit: s.tit, oque: s.oque, esperado: s.esperado, desvio: s.desvio })) } : null,

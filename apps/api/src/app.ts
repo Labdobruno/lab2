@@ -59,6 +59,8 @@
      GET  /admin/operacoes/:slug/inteligencia/waterfall?data= ponte de receita e de margem deste ciclo contra o anterior
      GET  /admin/operacoes/:slug/inteligencia/pessoas?de=&ate=&minN=   benchmark, receita potencial, gargalos, alertas, matriz
      GET  …/inteligencia/pessoas/comparar?v=&cmp= | drill?i=&foco= | leads?i=&foco= | meta?meta=&foco=;  POST …/pessoas/transferir { a, b, marcadas[] }
+     GET|POST /admin/operacoes/:slug/tarefas?status=&responsavel=&ate=   tarefas { titulo, prazo, responsavelId?, negocioId?, prioridade?, descricao?, origem? }
+     GET  /admin/operacoes/:slug/tarefas/:id;  POST …/tarefas/:id/concluir | adiar { prazo, motivo, terceiro? } | cancelar { motivo }
      GET  /admin/operacoes/:slug/quarter?data=  plano do quarter: passos, cenários e programa de ciclos
      POST /admin/operacoes/:slug/quarter        inicia o quarter (passo 1)        ?data=
      GET  /admin/operacoes/:slug/quarter/diagnostico                              passo 1: o quarter anterior
@@ -133,7 +135,7 @@ import {
 import {
   ausencias, dadosDoDia, definirCapacidade, desfazerLancamento, equipeDoDia, ErroDoDia, fotosDoDia, gravarFoto, justificar, lancamentos, lancar, marcarAusencia,
   marcarFeito, RITUAIS, ritualDaHora, type Ritual, acaoFechamento, cicloDoDia, fotografiaDoDia, gerarFechamento, lerFechamento, listaFechamentos, projecaoDaSemana,
-  relatorioDaSemana, relatorioDoDia, statusRotina, tiqueFechamento,
+  relatorioDaSemana, relatorioDoDia, statusRotina, tiqueFechamento, adiarTarefa, cancelarTarefa, concluirTarefa, criarTarefa, ErroDeTarefa, eventosDaTarefa, tarefaPorId, tarefas,
 } from '@lab/dia';
 import {
   ativarPlano, encerrarQuarter, ErroDeEstrategia, estrategiaDoQuarter, fecharMesDoQuarter, fecharPlano, historicoDoQuarter, levarMetasAosCiclos, marcosParaODia, metaDoAno, metaIntervalo, metasHistoricas,
@@ -319,6 +321,22 @@ export function criarApp(opts: { sql: Sql; env: Ambiente; fetch?: typeof fetch; 
           if (sub === 'experimento' && m === 'POST') return json(await virarExperimento(sql, op, data, await corpoJSON(req)), 201);
         } catch (e) {
           if (e instanceof ErroDeStudio || e instanceof ErroDeMemoria) return erro(e.message, e.status);
+          throw e;
+        }
+      }
+      if (id && acao === 'tarefas') {
+        const op = await operacaoPlanejamento(sql, id);
+        if (!op) return erro('operação não encontrada', 404);
+        const quem = req.headers.get('x-lab-por')?.slice(0, 80) ?? null;
+        try {
+          if (!sub && m === 'GET') return json(await tarefas(sql, op, { status: url.searchParams.get('status'), responsavelId: url.searchParams.get('responsavel'), ate: url.searchParams.get('ate'), limite: Number(url.searchParams.get('limite')) || undefined }));
+          if (!sub && m === 'POST') return json(await criarTarefa(sql, op, { ...(await corpoJSON(req) as Record<string, unknown>), por: quem } as never), 201);
+          if (sub && !partes[4] && m === 'GET') { const t = await tarefaPorId(sql, op, sub); if (!t) return erro('tarefa não encontrada', 404); return json({ ...t, eventos: await eventosDaTarefa(sql, op, sub) }); }
+          if (sub && partes[4] === 'concluir' && m === 'POST') return json(await concluirTarefa(sql, op, sub, quem));
+          if (sub && partes[4] === 'adiar' && m === 'POST') { const b = await corpoJSON(req); return json(await adiarTarefa(sql, op, sub, { prazo: b.prazo, motivo: b.motivo, terceiro: b.terceiro, por: quem })); }
+          if (sub && partes[4] === 'cancelar' && m === 'POST') { const b = await corpoJSON(req); return json(await cancelarTarefa(sql, op, sub, b.motivo, quem)); }
+        } catch (e) {
+          if (e instanceof ErroDeTarefa) return erro(e.message, e.status);
           throw e;
         }
       }
