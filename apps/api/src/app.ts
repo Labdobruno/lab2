@@ -66,7 +66,19 @@
      GET  /admin/operacoes/:slug/dia/fechamentos?de=&ate=  lista dos relatórios gravados
      GET  /admin/operacoes/:slug/dia/fechamento/rotina     situação da rotina das 17h30
      POST /admin/operacoes/:slug/dia/fechamento/gerar      { data? } gera agora (repetir não duplica)
-     POST /admin/operacoes/:slug/dia/fechamento/acao       { data?, chave, estado: analisada|decidida|encaminhada|investigar, texto } */
+     POST /admin/operacoes/:slug/dia/fechamento/acao       { data?, chave, estado: analisada|decidida|encaminhada|investigar, texto }
+     GET  /admin/operacoes/:slug/estrategia?data=          o quarter de verdade: documento + revisão do anterior, diagnóstico, meta × cenários, meses, aprovação, programa, avisos
+     POST /admin/operacoes/:slug/estrategia                { objetivo?, krs?, prioridades?, iniciativas?, meses?, cenarios?, riscos?, gatilhos?, capacidade?, decisoes?, respostas?, premissas? }
+     POST /admin/operacoes/:slug/estrategia/publicar       { motivo? }  cada publicação é uma versão imutável; revisar exige motivo
+     POST /admin/operacoes/:slug/estrategia/metas          leva a meta de receita dos três meses para os ciclos (ação explícita) e congela o programa
+     POST /admin/operacoes/:slug/estrategia/fechar-mes     { m: 0|1|2, classif: { marcoId: concluido|parcial|pendente|replanejado|bloqueado|cancelado }, nota? }
+     POST /admin/operacoes/:slug/estrategia/encerrar       depois do último dia: compara com a v1, avalia as iniciativas, congela
+     POST /admin/operacoes/:slug/estrategia/aprendizado    { tipo, texto, dados?, cicloInicio? }
+     GET  /admin/operacoes/:slug/estrategia/historico | marcos?pessoa=nome
+     GET  /admin/operacoes/:slug/metas-historicas?n=13 | /ano | /intervalo?de=&ate=     meta oficial por ciclo (D16–D20), ano, intervalo
+     POST /admin/operacoes/:slug/metas-historicas/registrar { cicloInicio } | /revisar { cicloInicio, tipo?, receita?, justificativa, origem?, limitacoes? }
+     GET  /admin/operacoes/:slug/plano-ciclo?data=         plano do ciclo: original, versões, vigente
+     POST /admin/operacoes/:slug/plano-ciclo/ativar | replanejar { corte, motivo, metas } | fechar */
 import { FUNCOES_PESSOA, resolverPack, VARIAVEIS, type PackResolvido } from '@lab/nucleo';
 import {
   atualizarPackDaOperacao, carregarConector, packDaOperacao, conectorDoTipo, criarOperacao, iguaisSeguro, importar, processarPendentes,
@@ -91,6 +103,10 @@ import {
   marcarFeito, RITUAIS, ritualDaHora, type Ritual, acaoFechamento, cicloDoDia, fotografiaDoDia, gerarFechamento, lerFechamento, listaFechamentos, projecaoDaSemana,
   relatorioDaSemana, relatorioDoDia, statusRotina, tiqueFechamento,
 } from '@lab/dia';
+import {
+  ativarPlano, encerrarQuarter, ErroDeEstrategia, estrategiaDoQuarter, fecharMesDoQuarter, fecharPlano, historicoDoQuarter, levarMetasAosCiclos, marcosParaODia, metaDoAno, metaIntervalo, metasHistoricas,
+  planoDoCiclo, publicarEstrategia, registrarAprendizadoDoQuarter, registrarEncerramento, replanejarCiclo, revisarMeta, salvarEstrategia, tiqueMetas,
+} from '@lab/estrategia';
 import { garantirMigracoes } from './migracoes.js';
 import { MIGRACOES } from './migracoes.gen.js';
 import type { Sql } from 'postgres';
@@ -231,6 +247,54 @@ export function criarApp(opts: { sql: Sql; env: Ambiente; fetch?: typeof fetch; 
           throw e;
         }
       }
+      if (id && ['estrategia', 'metas-historicas', 'plano-ciclo'].includes(acao ?? '')) {
+        const op = await operacaoPlanejamento(sql, id);
+        if (!op) return erro('operação não encontrada', 404);
+        const agora = (opts.agora ?? (() => new Date()))(), hoje = hojeNoFuso(op.fuso, agora);
+        const data = url.searchParams.get('data') ?? hoje;
+        if (!dataValida(data)) return erro('data deve ser AAAA-MM-DD');
+        const quem = req.headers.get('x-lab-por')?.slice(0, 80) ?? null;
+        try {
+          if (acao === 'estrategia') {
+            if (!sub && m === 'GET') return json(await estrategiaDoQuarter(sql, op, data, agora));
+            if (!sub && m === 'POST') return json(await salvarEstrategia(sql, op, data, await corpoJSON(req), quem));
+            if (sub === 'historico' && m === 'GET') return json(await historicoDoQuarter(sql, op, data));
+            if (sub === 'marcos' && m === 'GET') return json(await marcosParaODia(sql, op, data, url.searchParams.get('pessoa')));
+            if (m === 'POST') {
+              const b = await corpoJSON(req).catch(() => ({} as Record<string, unknown>));
+              if (sub === 'publicar') return json(await publicarEstrategia(sql, op, data, typeof b.motivo === 'string' ? b.motivo : null, quem, agora), 201);
+              if (sub === 'metas') return json(await levarMetasAosCiclos(sql, op, data, quem, agora), 201);
+              if (sub === 'fechar-mes') return json(await fecharMesDoQuarter(sql, op, data, { m: Number(b.m), classif: (b.classif ?? {}) as Record<string, string>, ...(typeof b.nota === 'string' ? { nota: b.nota } : {}) }, quem, agora), 201);
+              if (sub === 'encerrar') return json(await encerrarQuarter(sql, op, data, quem, agora), 201);
+              if (sub === 'aprendizado') return json(await registrarAprendizadoDoQuarter(sql, op, data, { tipo: String(b.tipo), texto: String(b.texto ?? ''), ...(b.dados && typeof b.dados === 'object' ? { dados: b.dados as Record<string, unknown> } : {}), cicloInicio: typeof b.cicloInicio === 'string' && dataValida(b.cicloInicio) ? b.cicloInicio : null }), 201);
+            }
+          }
+          if (acao === 'metas-historicas') {
+            if (!sub && m === 'GET') return json(await metasHistoricas(sql, op, hoje, Math.max(1, Math.min(36, Number(url.searchParams.get('n') ?? 13) || 13))));
+            if (sub === 'ano' && m === 'GET') return json(await metaDoAno(sql, op, hoje));
+            if (sub === 'intervalo' && m === 'GET') { const de = url.searchParams.get('de') ?? '', ate = url.searchParams.get('ate') ?? ''; if (!dataValida(de) || !dataValida(ate)) return erro('informe de e ate (AAAA-MM-DD)'); return json(await metaIntervalo(sql, op, de, ate, hoje)); }
+            if (m === 'POST') {
+              const b = await corpoJSON(req), c = String(b.cicloInicio ?? '');
+              if (!dataValida(c)) return erro('informe cicloInicio (AAAA-MM-DD)');
+              if (sub === 'registrar') return json(await registrarEncerramento(sql, op, c, { manual: true, por: quem, agora, hoje }), 201);
+              if (sub === 'revisar') return json(await revisarMeta(sql, op, c, { tipo: typeof b.tipo === 'string' ? b.tipo : undefined, receita: b.receita, justificativa: String(b.justificativa ?? ''), origem: typeof b.origem === 'string' ? b.origem : undefined, limitacoes: typeof b.limitacoes === 'string' ? b.limitacoes : undefined }, quem, agora), 201);
+            }
+          }
+          if (acao === 'plano-ciclo') {
+            const ciclo = cicloDaOperacao(op, data).inicio;
+            if (!sub && m === 'GET') return json(await planoDoCiclo(sql, op, ciclo));
+            if (m === 'POST') {
+              const b = await corpoJSON(req).catch(() => ({} as Record<string, unknown>));
+              if (sub === 'ativar') return json(await ativarPlano(sql, op, ciclo, quem, agora), 201);
+              if (sub === 'replanejar') return json(await replanejarCiclo(sql, op, ciclo, { corte: String(b.corte ?? ''), motivo: String(b.motivo ?? ''), metas: Array.isArray(b.metas) ? (b.metas as Array<{ indicador: string; pessoaId?: string | null; valor: number }>).map(x => ({ indicador: String(x.indicador), pessoaId: x.pessoaId ?? null, valor: Number(x.valor) })) : [], por: quem }, agora), 201);
+              if (sub === 'fechar') return json(await fecharPlano(sql, op, ciclo, quem, agora), 201);
+            }
+          }
+        } catch (e) {
+          if (e instanceof ErroDeEstrategia) return erro(e.message, e.status);
+          throw e;
+        }
+      }
       if (id && ['quarter', 'fechar-ciclo', 'retratos', 'aprendizados'].includes(acao ?? '')) {
         const op = await operacaoPlanejamento(sql, id);
         if (!op) return erro('operação não encontrada', 404);
@@ -284,7 +348,8 @@ export function criarApp(opts: { sql: Sql; env: Ambiente; fetch?: typeof fetch; 
             if (!sub && m === 'GET') {
               const pessoa = url.searchParams.get('pessoa') ?? '';
               if (!UUID.test(pessoa)) return erro('informe pessoa (id)');
-              return json(await dadosDoDia(sql, op, pessoa, data, ritual, agora));
+              const D = await dadosDoDia(sql, op, pessoa, data, ritual, agora);
+              return json({ ...D, quarter: await marcosParaODia(sql, op, data, D.pessoa.nome).catch(() => null) });
             }
             if (sub === 'equipe' && m === 'GET') return json(await equipeDoDia(sql, op, data, ritual, agora));
             if (sub === 'fotos' && m === 'GET') { const pessoa = url.searchParams.get('pessoa') ?? ''; if (!UUID.test(pessoa)) return erro('informe pessoa (id)'); return json(await fotosDoDia(sql, op, pessoa, data)); }
@@ -511,6 +576,9 @@ export async function rodadaAgendada(opts: { sql: Sql; env: Ambiente; fetch?: ty
   for (const o of await opts.sql<{ slug: string }[]>`select slug from lab.operacao where ativa order by criado_em`) {
     try { const op = await operacaoPlanejamento(opts.sql, o.slug); if (op) resultado['fechamento:' + o.slug] = await tiqueFechamento(opts.sql, op, agora); }
     catch (e) { resultado['fechamento:' + o.slug] = { status: 'falhou', falha: (e as Error).message }; }
+    /* metas históricas: observa a meta em vigor de hoje e registra os ciclos encerrados sem registro (idempotente) */
+    try { const op = await operacaoPlanejamento(opts.sql, o.slug); if (op) resultado['metas:' + o.slug] = await tiqueMetas(opts.sql, op, agora); }
+    catch (e) { resultado['metas:' + o.slug] = { falha: (e as Error).message }; }
   }
   for (const c of conectores) {
     try {

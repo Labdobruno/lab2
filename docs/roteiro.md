@@ -19,8 +19,9 @@ Aprovado pelo Bruno até a fase 8 (segunda operação).
 |---|---|---|
 | **1. Plano do dia e rituais** ✅ | Meta do dia inteira, recuperação distribuída, objetivos da semana, quadrante, viabilidade, negligência, cenários, padrão, gargalo, capacidade; três rituais com foto imutável; equipe para o gestor; ausências, lançamentos e capacidade. Corrige a meta diária (ceil) e o build-up (arredondamento por degrau) da V2. Ver `docs/dia.md` | `plano_dia_motor.js`, `plano_dia.js`, `producao.js`, `gestao.js`, `esforco.js` |
 | **2. "Vamos bater a meta?" e a rotina** ✅ | Projeção do ciclo (4 projeções, chance de bater, fora da curva), sinais com classe do desvio e veredito, contingência (régua, trajetória, pessoa × dia), semana (relatório e projeção) e o Fechamento do dia gerado às 17h30 no servidor, imutável, com complementos, decisões e recorrência. Ver `docs/dia.md` | `lab_plan.js` (lpProjecoes, lpSinais), `lab.js` (labForecast), `contingencia_motor.js`, `daily_motor.js`, `worker/daily.mjs`, `lab_semana.js`, `lab_projsemana.js`, `lab_objetivos.js` |
-| 3. Economia da venda | Precificação, margem por venda, desconto, eficiência financeira comercial (sem contas a pagar) | `lp*`, economia |
-| 4. Construtor e GTM | Hipóteses com impacto, construtor de funil unificado ao Studio | `gs*`, `lbc*` |
+| **3. O quarter de verdade** ✅ | Revisão automática do quarter anterior, diagnóstico com estado da evidência, prioridades explicáveis, meta × cenários por premissa (a meta nunca é reduzida), iniciativas com hipótese e marcos, três meses com bottom-up, aprovação com bloqueios, publicação com versões, programa original × vigente, reprevisão, avisos, fechamento do mês, encerramento e aprendizados; plano do ciclo com versões; metas históricas por ciclo (D16–D20). Ver `docs/quarter.md` | `lab_quarter.js`, `lab_objetivos.js`, `lab_metas.js` |
+| 4. Economia da venda | Precificação, margem por venda, desconto, eficiência financeira comercial (sem contas a pagar) | `lp*`, economia |
+| 5. Construtor e GTM | Hipóteses com impacto, construtor de funil unificado ao Studio | `gs*`, `lbc*` |
 
 ## Pendências
 

@@ -66,6 +66,8 @@ async function telaDiaPessoa(time,quem,msg,ok){
     var tit=D.ritual==='fim'?(okN===S.length?'Sim: dia de sucesso':'Faltou '+(S.length-okN)+' de '+S.length):(D.ritual==='tarde'?okN+' de '+S.length+' cumpridos':'É um dia de sucesso se…');
     app.appendChild(el('div',{class:'cartao'},[el('p',{class:'grande',texto:tit}),barra(okN,S.length),el('ul',{class:'compromissos'},S.map(function(s){return itemCompromisso(D,s)}))]));
   }
+  /* 1b. entregáveis do quarter: atrasados e os que vencem nos próximos 7 dias */
+  if(D.quarter&&D.quarter.itens&&D.quarter.itens.length)app.appendChild(el('div',{class:'cartao'},[el('h2',{texto:'Entregáveis do quarter '+D.quarter.rotulo}),el('ul',{class:'compromissos'},D.quarter.itens.map(function(m){return el('li',{class:'compromisso'},[el('span',{class:'marca'+(m.situacao==='atrasado'?' atrasada':''),texto:m.situacao==='atrasado'?'!':String(m.dias)}),el('span',{},[el('strong',{texto:m.txt}),el('span',{class:'suave mini',texto:' · "'+m.ini+'" · '+(m.situacao==='atrasado'?'atrasado há '+m.dias+' dia(s)':'vence em '+m.dias+' dia(s)')+(m.resp?' · '+m.resp:'')})])])}))]));
   /* 2. produção: quanto falta hoje */
   var diarios=D.prod.filter(function(x){return x.diario&&x.metaTotal>0}),outros=D.prod.filter(function(x){return !x.diario&&(x.metaTotal>0||x.feitoCiclo>0)});
   if(diarios.length||outros.length){

@@ -79,3 +79,13 @@ Cada decisão tem o porquê, para não ser refeita sem motivo.
 - **Decisões do gestor dentro do relatório** (`acoes`, com histórico de até 20 por chave), sem tabela nova: é o que a recorrência lê no dia seguinte.
 - **Semana sem hipóteses da biblioteca** por enquanto: a V2 tem hipóteses em linguagem de fórmula; a compatibilidade "condições da semana" entra na onda da inteligência.
 - **Abas**: Dia · Meta · Semana · Fechamento do dia na frente; o resto em "Mais ▾". A aba "Ritmo" antiga continua acessível, mas a Meta a substitui.
+
+## Onda 3: o quarter de verdade e as metas históricas
+
+- **Pacote próprio** (`@lab/estrategia`) que depende de `planejamento`, `ciclos` e `metricas`, nunca de `dia`: o plano do dia recebe os marcos do quarter pela API, não por import, para não haver ciclo entre pacotes.
+- **A meta nunca é reduzida pelo LAB.** Meta × cenários mostra o que a meta exige; viabilidade mostra o déficit e alternativas; a reprevisão coexiste com a meta original. Replanejar é decisão com motivo e cria versão.
+- **Levar as metas aos ciclos é ação explícita** do gestor depois de publicar (como na V1): acrescenta a meta de receita em `lab.meta` e congela o programa original. Publicar não mexe nas metas dos ciclos.
+- **Capacidade não declarada não bloqueia a aprovação**: sem horas declaradas não há sobrecarga comprovada; vira aviso. Declarada e estourada, bloqueia até haver decisão registrada.
+- **Evidência de meta na V2 vai além da V1**: como `lab.meta` só acrescenta e tem `criado_em`, a meta cadastrada durante o ciclo prova a meta em vigor na época; o Fechamento do dia passa a gravar `ref.meta`; a rotina observa a meta de hoje uma vez por dia e registra ciclos encerrados até 3 ciclos para trás.
+- **Ticket entra como "taxa"** para amostra (como na V1): iniciativa cujo indicador é o ticket só valida a hipótese com n ≥ amostra mínima do pack.
+- **A tela antiga do quarter em 6 passos (programa de ciclos pelo build-up) continua** em **Mais › Programa de ciclos**; a nova **Quarter** é a estratégia.

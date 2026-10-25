@@ -252,7 +252,7 @@ describe.skipIf(semBanco)('API', () => {
 
   it('rodada agendada processa todos os conectores ativos', async () => {
     const r = await rodadaAgendada({ sql, env: { ADMIN_TOKEN: TOKEN } });
-    expect(Object.keys(r).filter(k => !k.startsWith('fechamento:')).sort()).toEqual(['n8n', 'planilhas']);
+    expect(Object.keys(r).filter(k => !k.startsWith('fechamento:') && !k.startsWith('metas:')).sort()).toEqual(['n8n', 'planilhas']);
     expect(Object.keys(r).filter(k => k.startsWith('fechamento:')).length).toBeGreaterThan(0);   // o tique do Fechamento do dia roda por operação
   });
 });
