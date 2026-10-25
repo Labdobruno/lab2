@@ -63,7 +63,8 @@ export function atalhos(E: EtapaFunil[]): Array<{ k: string; t: string; r: strin
   add('p:compar', 'comparecimento (reunião agendada → realizada)', ix('agendada'), ix('realizada'));
   add('p:oport', 'qualificação (reunião realizada → oportunidade)', ix('realizada'), ix('oportunidade'));
   add('p:prop', 'proposta (reunião realizada → proposta enviada)', ix('realizada'), ix('proposta'));
-  add('p:fech', 'fechamento (proposta → venda)', ix('proposta'), n);
+  add('p:fech', 'proposta → venda (proposta enviada → venda)', ix('proposta'), n);
+  add('p:neg', 'fechamento (negociação → venda)', ix('negociacao'), n);
   add('p:total', 'conversão lead → venda (funil inteiro)', 0, n);
   return out;
 }
@@ -85,7 +86,7 @@ export function normalizar<T extends { ind: string }>(cl: T, E: EtapaFunil[]): T
   if (r) { let [a, b] = r; a = Math.max(0, Math.min(n - 1, a)); b = Math.max(a + 1, Math.min(n, b)); cl.ind = 'r:' + a + ':' + b; }
   return cl;
 }
-export const artigo = (k: string, E: EtapaFunil[]) => (/^(conversão|margem|taxa|comissão)/.test(indicador(k, E).t) ? 'a' : 'o');
+export const artigo = (k: string, E: EtapaFunil[]) => (/^(conversão|margem|taxa|comissão|receita)/.test(indicador(k, E).t) ? 'a' : 'o');
 
 /* ---------- formatação pt-BR ---------- */
 export const fmtNum = (v: number, casas = 0) => v.toLocaleString('pt-BR', { minimumFractionDigits: casas, maximumFractionDigits: casas });
@@ -389,7 +390,7 @@ export function frase(R: SimulacaoESe, res: string, tempo: 'passado' | 'futuro' 
     return (art === 'a' ? 'a ' : 'o ') + l.I.t + ' ' + vb.ser + ' ' + ref + (mt ? ', mantendo ' + mt : '');
   });
   const Ir = indicador(res, E);
-  return partes.length ? 'Se ' + partes.join(' e ') + ', ' + vb.imp + ' ' + (artigo(res, E) === 'a' ? 'a ' : 'o ') + Ir.t + '?' : 'Escolha o que mudar.';
+  return partes.length ? 'Se ' + partes.join(' e ') + ', ' + vb.imp.replace(/ em$/, '') + ' ' + (artigo(res, E) === 'a' ? 'na ' : 'no ') + Ir.t + '?' : 'Escolha o que mudar.';
 }
 
 /* ---------- premissas financeiras a partir da política de preço (quando não há vendas com custo lançado) ---------- */

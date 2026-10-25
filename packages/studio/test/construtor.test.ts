@@ -28,7 +28,7 @@ describe('catálogo e chaves', () => {
   it('atalhos só para os papéis que existem; normalização de chaves antigas', () => {
     const at = atalhos(E).map(x => x.k);
     expect(at).toEqual(expect.arrayContaining(['p:agend', 'p:compar', 'p:prop', 'p:fech', 'p:total'])); expect(at).not.toContain('p:oport');
-    expect(atalhos(E).find(x => x.k === 'p:fech')!.r).toBe('r:4:5');
+    expect(atalhos(E).find(x => x.k === 'p:fech')!.r).toBe('r:4:5'); expect(atalhos(E).some(x => x.k === 'p:neg')).toBe(false);
     expect(normalizar({ ind: 'total' }, E).ind).toBe('r:0:5'); expect(normalizar({ ind: 'c2' }, E).ind).toBe('r:2:3'); expect(normalizar({ ind: 'p:compar' }, E).ind).toBe('r:2:3'); expect(normalizar({ ind: 'r:9:1' }, E).ind).toBe('r:4:5');
     expect(indicador('r:0:2', E).t).toBe('conversão lead → reunião agendada');
     expect(catalogo(E).some(x => x.k === 'custoPct')).toBe(true); expect(catalogo(E).some(x => /kwp/i.test(x.k))).toBe(false);
@@ -111,7 +111,7 @@ describe('simulação completa', () => {
     expect(R.premissasL.some(([t]) => t === 'conversão lead → venda')).toBe(false); // ocultos ficam fora da lista curta
     expect(R.ordem[0]).toMatch(/^1ª conversão proposta → venda/);
     expect(R.alertas.some(a => /pressupõe vendedores/.test(a))).toBe(true);
-    expect(frase(R, 'margem')).toBe('Se a conversão proposta → venda fosse maior em 5 p.p. e o ticket médio fosse maior em 10%, mantendo a margem %, qual seria o impacto em a margem de contribuição?'.replace('em a margem', 'em a margem'));
+    expect(frase(R, 'margem')).toBe('Se a conversão proposta → venda fosse maior em 5 p.p. e o ticket médio fosse maior em 10%, mantendo a margem %, qual seria o impacto na margem de contribuição?');
   });
   it('erros que impedem a conta: marketing sem lançamento, taxa sem histórico, fixos ausentes, referência sem amostra', () => {
     const semMk = { ...base(), mk: false, inv: null, imp: null, cli: null, Lp: null };

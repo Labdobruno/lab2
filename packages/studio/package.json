@@ -11,6 +11,7 @@
     "@lab/planejamento": "*",
     "@lab/hipoteses": "*",
     "postgres": "3.4.9",
-    "@lab/economia": "*"
+    "@lab/economia": "*",
+    "@lab/estrategia": "*"
   }
 }
