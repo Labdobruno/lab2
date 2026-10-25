@@ -17,6 +17,7 @@ export function avaliarHipoteses(hipoteses: Hipotese[], ctx: Contexto, orcamento
   const disparos: Achado[] = [], semDados: SemDados[] = [], erros: ResultadoMotor['errosDeFormula'] = [];
   let nao = 0;
   for (const h of hipoteses) {
+    if (!h.quando) continue;   // hipótese estruturada (v3): avaliada pelo motor v3
     try {
       const quando = analisar(h.quando);
       const usadas = variaveisUsadas(quando);

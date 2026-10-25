@@ -505,9 +505,113 @@
             "type": "string",
             "minLength": 1
           },
+          "condicoes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "met": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9_]*$"
+                },
+                "op": {
+                  "type": "string",
+                  "enum": [
+                    "AUMENTOU",
+                    "DIMINUIU",
+                    "ESTAVEL",
+                    "ACIMA",
+                    "ABAIXO"
+                  ]
+                },
+                "janela": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "base": {
+                  "type": "string",
+                  "enum": [
+                    "anterior",
+                    "media90",
+                    "ano"
+                  ]
+                },
+                "limiar": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "banda": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "amostraMin": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "ref": {
+                  "type": "number"
+                },
+                "histerese": {
+                  "type": "object",
+                  "properties": {
+                    "folga": {
+                      "type": "number",
+                      "minimum": 0
+                    },
+                    "dias": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "intervalo": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "met",
+                "op"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "essenciais": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "impacto": {
             "type": "string",
             "minLength": 1
+          },
+          "dimensao": {
+            "type": "string",
+            "enum": [
+              "contribuicao",
+              "receita",
+              "caixa",
+              "capacidade"
+            ]
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "problema",
+              "risco",
+              "oportunidade",
+              "gargalo",
+              "anomalia",
+              "contradicao",
+              "hipotese",
+              "investigacao"
+            ]
           },
           "acao": {
             "type": "string",
@@ -520,6 +624,152 @@
               "media",
               "baixa"
             ]
+          },
+          "mecanismo": {
+            "type": "string"
+          },
+          "rivais": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9_-]*$"
+            }
+          },
+          "distingue": {
+            "type": "string"
+          },
+          "intervencoes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9_-]*$"
+            }
+          },
+          "requer": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "remover": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "chave"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "intervencoes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "chave": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_-]*$"
+          },
+          "nome": {
+            "type": "string",
+            "minLength": 1
+          },
+          "variavel": {
+            "type": "string"
+          },
+          "ataca": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9_-]*$"
+            }
+          },
+          "impacto": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "fonte": {
+            "type": "string"
+          },
+          "riscos": {
+            "type": "string"
+          },
+          "naoUsar": {
+            "type": "string"
+          },
+          "esforco": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 3
+          },
+          "prazoDias": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "remover": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "chave"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "compostos": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "chave": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_-]*$"
+          },
+          "nome": {
+            "type": "string",
+            "minLength": 1
+          },
+          "de": {
+            "minItems": 2,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9_-]*$"
+            }
+          },
+          "relacao": {
+            "type": "string"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "problema",
+              "risco",
+              "oportunidade",
+              "gargalo",
+              "anomalia",
+              "contradicao",
+              "hipotese",
+              "investigacao"
+            ]
+          },
+          "dimensao": {
+            "type": "string",
+            "enum": [
+              "contribuicao",
+              "receita",
+              "caixa",
+              "capacidade"
+            ]
+          },
+          "texto": {
+            "type": "string"
           },
           "remover": {
             "type": "boolean"

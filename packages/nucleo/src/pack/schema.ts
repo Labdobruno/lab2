@@ -104,13 +104,58 @@ export const CSPack = z.object({
 export const SEVERIDADES = ['alta', 'media', 'baixa'] as const;
 /* Hipótese: "se isto for verdade (quando), isto custa tanto (impacto, em R$); faça aquilo (acao)".
    quando e impacto são fórmulas em texto (ver hipoteses/expr.ts); não há código no pack. */
+/* Condição estruturada (motor v3): seis parâmetros. janela em dias; base = janela anterior | média dos 90 dias | mesmo período do ano anterior;
+   limiar e banda em p.p. para métricas em %, em % relativo para as demais; amostraMin = eventos mínimos; histerese = folga, dias para desligar, intervalo para religar. */
+export const OPERADORES_CONDICAO = ['AUMENTOU', 'DIMINUIU', 'ESTAVEL', 'ACIMA', 'ABAIXO'] as const;
+export const BASES_CONDICAO = ['anterior', 'media90', 'ano'] as const;
+export const CondicaoPack = z.object({
+  met: z.string().regex(/^[a-z][a-z0-9_]*$/),
+  op: z.enum(OPERADORES_CONDICAO),
+  janela: z.number().int().positive().optional(),
+  base: z.enum(BASES_CONDICAO).optional(),
+  limiar: z.number().min(0).optional(),
+  banda: z.number().min(0).optional(),
+  amostraMin: z.number().int().min(0).optional(),
+  ref: z.number().optional(),
+  histerese: z.object({ folga: z.number().min(0).optional(), dias: z.number().int().positive().optional(), intervalo: z.number().int().positive().optional() }).optional(),
+});
+export const TIPOS_ACHADO = ['problema', 'risco', 'oportunidade', 'gargalo', 'anomalia', 'contradicao', 'hipotese', 'investigacao'] as const;
+export const DIMENSOES_IMPACTO = ['contribuicao', 'receita', 'caixa', 'capacidade'] as const;
+/* Hipótese. Forma simples: "quando" é uma fórmula booleana sobre o contexto de hoje. Forma estruturada (v3): "condicoes" com seis parâmetros cada,
+   essenciais, rivais, dado que distingue, mecanismo, intervenções. O impacto é fórmula em texto nas duas formas; na v3 pode usar id, id_base e id_n. */
 export const HipotesePack = z.object({
   chave,
   titulo: nome,
-  quando: z.string().min(1),
+  quando: z.string().min(1).optional(),
+  condicoes: z.array(CondicaoPack).optional(),
+  essenciais: z.array(z.string()).optional(),
   impacto: z.string().min(1).optional(),
+  dimensao: z.enum(DIMENSOES_IMPACTO).optional(),
+  tipo: z.enum(TIPOS_ACHADO).optional(),
   acao: z.string().min(1),
   severidade: z.enum(SEVERIDADES).optional(),
+  mecanismo: z.string().optional(),
+  rivais: z.array(chave).optional(),
+  distingue: z.string().optional(),
+  intervencoes: z.array(chave).optional(),
+  requer: z.array(z.string()).optional(),              // fontes que a operação precisa ter ligadas
+  remover,
+});   // "quando" ou "condicoes": o resolver confere (um refine impediria a forma parcial da herança)
+/* Intervenção: o que se pode fazer, com a direção esperada em cada dimensão (+ ++ − −− 0), esforço 1–3 e prazo */
+export const IntervencaoPack = z.object({
+  chave, nome,
+  variavel: z.string().optional(),
+  ataca: z.array(chave).optional(),
+  impacto: z.record(z.string(), z.string()).optional(),
+  fonte: z.string().optional(), riscos: z.string().optional(), naoUsar: z.string().optional(),
+  esforco: z.number().int().min(1).max(3).optional(), prazoDias: z.number().int().positive().optional(),
+  remover,
+});
+/* Achado composto: existe só quando todas as hipóteses componentes estão ativas; um problema, um cartão */
+export const CompostoPack = z.object({
+  chave, nome,
+  de: z.array(chave).min(2),
+  relacao: z.string().optional(), tipo: z.enum(TIPOS_ACHADO).optional(), dimensao: z.enum(DIMENSOES_IMPACTO).optional(), texto: z.string().optional(),
   remover,
 });
 
@@ -148,6 +193,8 @@ const camposPack = (estrito: boolean) => {
       condicoes: z.array(it(CondicaoPagamentoPack)).optional(),
     }).optional(),
     hipoteses: z.array(it(HipotesePack)).optional(),
+    intervencoes: z.array(it(IntervencaoPack)).optional(),
+    compostos: z.array(it(CompostoPack)).optional(),
     cs: CSPack.optional(),
     parametros: ParametrosPack.optional(),
   }).strict();
@@ -185,6 +232,8 @@ export interface PackResolvido {
     condicoes: (Omit<z.infer<typeof CondicaoPagamentoPack>, 'remover'> & { taxa: number })[];
   };
   hipoteses: Omit<z.infer<typeof HipotesePack>, 'remover'>[];
+  intervencoes: Omit<z.infer<typeof IntervencaoPack>, 'remover'>[];
+  compostos: Omit<z.infer<typeof CompostoPack>, 'remover'>[];
   cs: z.infer<typeof CSPack>;
   parametros: Required<z.infer<typeof ParametrosPack>>;
 }

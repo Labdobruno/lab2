@@ -5,6 +5,7 @@ import { PAPEIS_ETAPA, type PapelEtapa } from '../papeis.js';
 import { Pack, PackArquivo, type PackResolvido } from './schema.js';
 import { analisar, ErroExpressao, variaveisUsadas } from '../hipoteses/expr.js';
 import { VARIAVEIS } from '../hipoteses/variaveis.js';
+import { METRICAS_V3, variavelV3Valida } from '../hipoteses/metricas_v3.js';
 
 export type Catalogo = Record<string, unknown>;     // id do pack → conteúdo do arquivo
 export interface ResultadoPack { ok: boolean; pack: PackResolvido | null; erros: string[]; avisos: string[] }
@@ -116,6 +117,8 @@ export function resolverPack(id: string, catalogo: Catalogo): ResultadoPack {
       condicoes: (p.precificacao?.condicoes ?? []).map(c => ({ ...c, taxa: c.taxa ?? 0 })) as PackResolvido['precificacao']['condicoes'],
     },
     hipoteses: (p.hipoteses ?? []) as PackResolvido['hipoteses'],
+    intervencoes: (p.intervencoes ?? []) as PackResolvido['intervencoes'],
+    compostos: (p.compostos ?? []) as PackResolvido['compostos'],
     cs: p.cs ?? {},
     parametros: { ...PADROES.parametros, ...(p.parametros ?? {}) },
   };
@@ -151,14 +154,30 @@ function conferir(p: PackResolvido, erros: string[], avisos: string[]) {
   duplicadas(p.precificacao.linhas, 'precificacao.linhas', erros);
   duplicadas(p.precificacao.condicoes, 'precificacao.condicoes', erros);
   duplicadas(p.hipoteses, 'hipoteses', erros);
+  duplicadas(p.intervencoes, 'intervencoes', erros);
+  duplicadas(p.compostos, 'compostos', erros);
+  const chavesH = new Set(p.hipoteses.map(h => h.chave)), chavesI = new Set(p.intervencoes.map(i => i.chave));
   for (const h of p.hipoteses) {
+    const v3 = !!(h.condicoes && h.condicoes.length);
+    if (!h.quando && !v3) erros.push(`hipoteses[${h.chave}]: precisa de "quando" (fórmula) ou de "condicoes" (estruturadas)`);
+    for (const c of h.condicoes ?? []) {
+      if (!(c.met in METRICAS_V3)) erros.push(`hipoteses[${h.chave}].condicoes: a métrica "${c.met}" não existe no catálogo v3`);
+      if ((c.op === 'ACIMA' || c.op === 'ABAIXO') && c.ref == null) erros.push(`hipoteses[${h.chave}].condicoes[${c.met}]: ${c.op} precisa de "ref"`);
+    }
+    for (const m of h.essenciais ?? []) if (!(h.condicoes ?? []).some(c => c.met === m)) erros.push(`hipoteses[${h.chave}].essenciais: "${m}" não está nas condições`);
+    for (const r of h.rivais ?? []) if (!chavesH.has(r)) avisos.push(`hipoteses[${h.chave}].rivais: "${r}" não existe neste pack`);
+    for (const i of h.intervencoes ?? []) if (!chavesI.has(i)) avisos.push(`hipoteses[${h.chave}].intervencoes: "${i}" não existe neste pack`);
     for (const [campo, texto] of [['quando', h.quando], ['impacto', h.impacto]] as const) {
       if (texto == null) continue;
       try {
-        for (const v of variaveisUsadas(analisar(texto))) if (!(v in VARIAVEIS)) erros.push(`hipoteses[${h.chave}].${campo}: a variável "${v}" não existe (veja /admin/hipoteses/variaveis)`);
+        for (const v of variaveisUsadas(analisar(texto))) {
+          const ok = v3 ? variavelV3Valida(v, VARIAVEIS) : v in VARIAVEIS;
+          if (!ok) erros.push(`hipoteses[${h.chave}].${campo}: a variável "${v}" não existe (veja /admin/hipoteses/variaveis${v3 ? ' e o catálogo v3: id, id_base, id_n' : ''})`);
+        }
       } catch (e) { erros.push(`hipoteses[${h.chave}].${campo}: ${e instanceof ErroExpressao ? e.message : 'fórmula inválida'}`); }
     }
   }
+  for (const c of p.compostos) for (const k of c.de) if (!chavesH.has(k)) erros.push(`compostos[${c.chave}].de: a hipótese "${k}" não existe`);
 
   const aq = p.funis.filter(f => f.lado === 'aquisicao');
   if (!aq.length) erros.push('o pack precisa de pelo menos um funil de aquisição (lado "aquisicao")');

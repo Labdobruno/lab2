@@ -5,79 +5,915 @@
   "versao": "1.0.0",
   "descricao": "Ponto de partida neutro: aquisição + pós-venda (onboarding, retenção, expansão). Todo pack herda daqui.",
   "modelo": "misto",
-  "textos": { "receita": "Receita", "cliente": "Cliente", "vendedor": "Vendedor", "negocio": "Negócio" },
-  "calendario": { "feriados": "BR", "diasUteis": [1, 2, 3, 4, 5], "inicioCicloDia": 1, "mesInicioAno": 1, "fuso": "America/Sao_Paulo" },
+  "textos": {
+    "receita": "Receita",
+    "cliente": "Cliente",
+    "vendedor": "Vendedor",
+    "negocio": "Negócio"
+  },
+  "calendario": {
+    "feriados": "BR",
+    "diasUteis": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "inicioCicloDia": 1,
+    "mesInicioAno": 1,
+    "fuso": "America/Sao_Paulo"
+  },
   "funis": [
     {
-      "chave": "aquisicao", "nome": "Aquisição", "lado": "aquisicao", "principal": true,
+      "chave": "aquisicao",
+      "nome": "Aquisição",
+      "lado": "aquisicao",
+      "principal": true,
       "etapas": [
-        { "chave": "lead", "nome": "Lead", "papel": "lead", "prazoDias": 2 },
-        { "chave": "contato", "nome": "Em contato", "papel": "contato", "prazoDias": 5 },
-        { "chave": "agendada", "nome": "Reunião agendada", "papel": "agendada", "prazoDias": 7 },
-        { "chave": "realizada", "nome": "Reunião realizada", "papel": "realizada", "prazoDias": 3 },
-        { "chave": "proposta", "nome": "Proposta", "papel": "proposta", "prazoDias": 7 },
-        { "chave": "negociacao", "nome": "Negociação", "papel": "negociacao", "prazoDias": 10 },
-        { "chave": "ganho", "nome": "Venda", "papel": "ganho" },
-        { "chave": "perdido", "nome": "Perdido", "papel": "perdido" }
+        {
+          "chave": "lead",
+          "nome": "Lead",
+          "papel": "lead",
+          "prazoDias": 2
+        },
+        {
+          "chave": "contato",
+          "nome": "Em contato",
+          "papel": "contato",
+          "prazoDias": 5
+        },
+        {
+          "chave": "agendada",
+          "nome": "Reunião agendada",
+          "papel": "agendada",
+          "prazoDias": 7
+        },
+        {
+          "chave": "realizada",
+          "nome": "Reunião realizada",
+          "papel": "realizada",
+          "prazoDias": 3
+        },
+        {
+          "chave": "proposta",
+          "nome": "Proposta",
+          "papel": "proposta",
+          "prazoDias": 7
+        },
+        {
+          "chave": "negociacao",
+          "nome": "Negociação",
+          "papel": "negociacao",
+          "prazoDias": 10
+        },
+        {
+          "chave": "ganho",
+          "nome": "Venda",
+          "papel": "ganho"
+        },
+        {
+          "chave": "perdido",
+          "nome": "Perdido",
+          "papel": "perdido"
+        }
       ]
     },
     {
-      "chave": "carteira", "nome": "Carteira (pós-venda)", "lado": "pos_venda",
+      "chave": "carteira",
+      "nome": "Carteira (pós-venda)",
+      "lado": "pos_venda",
       "etapas": [
-        { "chave": "onboarding", "nome": "Onboarding", "papel": "onboarding", "prazoDias": 30 },
-        { "chave": "ativo", "nome": "Ativo", "papel": "ativo" },
-        { "chave": "renovacao", "nome": "Em renovação", "papel": "renovacao", "prazoDias": 30 },
-        { "chave": "expansao", "nome": "Em expansão", "papel": "expansao", "prazoDias": 30 },
-        { "chave": "churn", "nome": "Cancelou", "papel": "churn" }
+        {
+          "chave": "onboarding",
+          "nome": "Onboarding",
+          "papel": "onboarding",
+          "prazoDias": 30
+        },
+        {
+          "chave": "ativo",
+          "nome": "Ativo",
+          "papel": "ativo"
+        },
+        {
+          "chave": "renovacao",
+          "nome": "Em renovação",
+          "papel": "renovacao",
+          "prazoDias": 30
+        },
+        {
+          "chave": "expansao",
+          "nome": "Em expansão",
+          "papel": "expansao",
+          "prazoDias": 30
+        },
+        {
+          "chave": "churn",
+          "nome": "Cancelou",
+          "papel": "churn"
+        }
       ]
     }
   ],
   "atividades": [
-    { "chave": "tentativa", "nome": "Tentativa de contato", "papel": "tentativa", "unidade": "tentativas", "metaDiaria": true },
-    { "chave": "contato", "nome": "Contato efetivo", "papel": "contato", "unidade": "contatos" },
-    { "chave": "agendamento", "nome": "Agendamento", "papel": "agendamento", "unidade": "agendamentos" },
-    { "chave": "reuniao", "nome": "Reunião realizada", "papel": "reuniao_realizada", "unidade": "reuniões" },
-    { "chave": "no_show", "nome": "Não compareceu", "papel": "no_show" },
-    { "chave": "proposta", "nome": "Proposta enviada", "papel": "proposta_enviada", "unidade": "propostas" },
-    { "chave": "follow_up", "nome": "Follow-up", "papel": "follow_up" },
-    { "chave": "reuniao_cs", "nome": "Reunião de conta", "papel": "reuniao_cs" },
-    { "chave": "indicacao_pedida", "nome": "Pedido de indicação", "papel": "indicacao_pedida" },
-    { "chave": "nota", "nome": "Nota", "papel": "nota" }
+    {
+      "chave": "tentativa",
+      "nome": "Tentativa de contato",
+      "papel": "tentativa",
+      "unidade": "tentativas",
+      "metaDiaria": true
+    },
+    {
+      "chave": "contato",
+      "nome": "Contato efetivo",
+      "papel": "contato",
+      "unidade": "contatos"
+    },
+    {
+      "chave": "agendamento",
+      "nome": "Agendamento",
+      "papel": "agendamento",
+      "unidade": "agendamentos"
+    },
+    {
+      "chave": "reuniao",
+      "nome": "Reunião realizada",
+      "papel": "reuniao_realizada",
+      "unidade": "reuniões"
+    },
+    {
+      "chave": "no_show",
+      "nome": "Não compareceu",
+      "papel": "no_show"
+    },
+    {
+      "chave": "proposta",
+      "nome": "Proposta enviada",
+      "papel": "proposta_enviada",
+      "unidade": "propostas"
+    },
+    {
+      "chave": "follow_up",
+      "nome": "Follow-up",
+      "papel": "follow_up"
+    },
+    {
+      "chave": "reuniao_cs",
+      "nome": "Reunião de conta",
+      "papel": "reuniao_cs"
+    },
+    {
+      "chave": "indicacao_pedida",
+      "nome": "Pedido de indicação",
+      "papel": "indicacao_pedida"
+    },
+    {
+      "chave": "nota",
+      "nome": "Nota",
+      "papel": "nota"
+    }
   ],
   "canais": [
-    { "chave": "indicacao", "nome": "Indicação", "tipo": "indicacao" },
-    { "chave": "organico", "nome": "Orgânico", "tipo": "organico" },
-    { "chave": "pago", "nome": "Mídia paga", "tipo": "pago" },
-    { "chave": "outbound", "nome": "Prospecção ativa", "tipo": "outbound" },
-    { "chave": "base", "nome": "Base de clientes", "tipo": "base", "origemDeLead": false }
+    {
+      "chave": "indicacao",
+      "nome": "Indicação",
+      "tipo": "indicacao"
+    },
+    {
+      "chave": "organico",
+      "nome": "Orgânico",
+      "tipo": "organico"
+    },
+    {
+      "chave": "pago",
+      "nome": "Mídia paga",
+      "tipo": "pago"
+    },
+    {
+      "chave": "outbound",
+      "nome": "Prospecção ativa",
+      "tipo": "outbound"
+    },
+    {
+      "chave": "base",
+      "nome": "Base de clientes",
+      "tipo": "base",
+      "origemDeLead": false
+    }
   ],
   "motivosPerda": [
-    { "chave": "preco", "nome": "Preço", "grupo": "preco" },
-    { "chave": "concorrente", "nome": "Fechou com concorrente", "grupo": "concorrencia" },
-    { "chave": "timing", "nome": "Não é o momento", "grupo": "timing" },
-    { "chave": "sem_resposta", "nome": "Parou de responder", "grupo": "sem_resposta" },
-    { "chave": "sem_fit", "nome": "Sem perfil", "grupo": "fit" },
-    { "chave": "outro", "nome": "Outro", "grupo": "outro" }
+    {
+      "chave": "preco",
+      "nome": "Preço",
+      "grupo": "preco"
+    },
+    {
+      "chave": "concorrente",
+      "nome": "Fechou com concorrente",
+      "grupo": "concorrencia"
+    },
+    {
+      "chave": "timing",
+      "nome": "Não é o momento",
+      "grupo": "timing"
+    },
+    {
+      "chave": "sem_resposta",
+      "nome": "Parou de responder",
+      "grupo": "sem_resposta"
+    },
+    {
+      "chave": "sem_fit",
+      "nome": "Sem perfil",
+      "grupo": "fit"
+    },
+    {
+      "chave": "outro",
+      "nome": "Outro",
+      "grupo": "outro"
+    }
   ],
-  "tiposNegocio": ["novo", "expansao", "renovacao", "revenda", "cross_sell"],
+  "tiposNegocio": [
+    "novo",
+    "expansao",
+    "renovacao",
+    "revenda",
+    "cross_sell"
+  ],
   "precificacao": {
     "linhas": [
-      { "chave": "imposto", "nome": "Impostos sobre a venda", "grupo": "deducao", "base": "percentual_preco", "valor": 0 },
-      { "chave": "custo_direto", "nome": "Custo direto da venda", "grupo": "custo_variavel", "base": "informado" },
-      { "chave": "comissao", "nome": "Comissão", "grupo": "comissao", "base": "percentual_liquido", "valor": 0 }
+      {
+        "chave": "imposto",
+        "nome": "Impostos sobre a venda",
+        "grupo": "deducao",
+        "base": "percentual_preco",
+        "valor": 0
+      },
+      {
+        "chave": "custo_direto",
+        "nome": "Custo direto da venda",
+        "grupo": "custo_variavel",
+        "base": "informado"
+      },
+      {
+        "chave": "comissao",
+        "nome": "Comissão",
+        "grupo": "comissao",
+        "base": "percentual_liquido",
+        "valor": 0
+      }
     ],
-    "condicoes": [ { "chave": "vista", "nome": "À vista", "taxa": 0 } ]
+    "condicoes": [
+      {
+        "chave": "vista",
+        "nome": "À vista",
+        "taxa": 0
+      }
+    ]
   },
-  "cs": { "recorrente": false, "janelaRenovacaoDias": 60, "janelaIndicacaoDias": 90 },
-  "parametros": { "maturacaoCoorteDias": 30, "amostraMinima": 10, "janelaHistoricaDias": 180 },
+  "cs": {
+    "recorrente": false,
+    "janelaRenovacaoDias": 60,
+    "janelaIndicacaoDias": 90
+  },
+  "parametros": {
+    "maturacaoCoorteDias": 30,
+    "amostraMinima": 10,
+    "janelaHistoricaDias": 180
+  },
   "hipoteses": [
-    {"chave": "desconto_alto", "titulo": "Descontos acima de 10% estão comendo receita", "quando": "desconto_medio > 0.10 && vendas >= amostra_minima", "impacto": "receita * desconto_medio / (1 - desconto_medio)", "acao": "Rever a alçada de desconto e exigir contrapartida (prazo, escopo, pagamento) em descontos acima de 10%.", "severidade": "media"},
-    {"chave": "taxa_ganho_baixa", "titulo": "Taxa de ganho abaixo de 25%", "quando": "fechados >= amostra_minima && taxa_ganho < 0.25", "impacto": "(0.25 - taxa_ganho) * fechados * ticket_medio", "acao": "Olhar os motivos de perda e o passo de negociação; apertar a qualificação antes da proposta.", "severidade": "alta"},
-    {"chave": "no_show_alto", "titulo": "Reuniões agendadas que não acontecem", "quando": "amostra_coorte >= amostra_minima && passo_realizada < 0.7", "impacto": "(0.7 - passo_realizada) * conv_agendada * amostra_coorte * (conv_ganho / conv_realizada) * ticket_medio", "acao": "Confirmar a reunião um dia antes, lembrar no dia e ter uma regra de remarcação.", "severidade": "media"},
-    {"chave": "pipeline_parado", "titulo": "Dinheiro parado no pipeline", "quando": "valor_parado > 0 && valor_parado >= 0.2 * valor_aberto", "impacto": "valor_parado * taxa_ganho", "acao": "Revisar os negócios parados um a um: avançar, reagendar ou encerrar.", "severidade": "media"},
-    {"chave": "perda_por_preco", "titulo": "Perdas concentradas em preço", "quando": "valor_perdido > 0 && valor_perdido_preco / valor_perdido > 0.3", "impacto": "valor_perdido_preco * taxa_ganho", "acao": "Testar condição de pagamento ou um pacote menor antes de ceder no preço.", "severidade": "media"},
-    {"chave": "cac_acima_da_margem", "titulo": "Custo de aquisição maior que a margem da venda", "quando": "vendas >= 1 && cac_medio > margem_percentual * ticket_medio", "impacto": "(cac_medio - margem_percentual * ticket_medio) * vendas", "acao": "Rever ou cortar os canais com pior CAC (veja o ROI por canal).", "severidade": "alta"},
-    {"chave": "churn_alto", "titulo": "Cancelamentos acima de 5% da receita recorrente", "quando": "churn_receita > 0.05", "impacto": "mrr_inicial * churn_receita * 12", "acao": "Mapear os motivos de cancelamento e agir nas contas em risco antes da renovação.", "severidade": "alta"},
-    {"chave": "ritmo_atras", "titulo": "Metade do time ou mais atrás do ritmo", "quando": "pct_atras >= 0.5 && dias_uteis_restantes > 0", "impacto": "max(receita_esperada_ate_hoje - receita_ate_hoje, 0)", "acao": "Abrir o plano do dia de quem está atrás e fazer o ajuste de contingência.", "severidade": "alta"}
+    {
+      "chave": "desconto_alto",
+      "titulo": "Descontos acima de 10% estão comendo receita",
+      "quando": "desconto_medio > 0.10 && vendas >= amostra_minima",
+      "impacto": "receita * desconto_medio / (1 - desconto_medio)",
+      "acao": "Rever a alçada de desconto e exigir contrapartida (prazo, escopo, pagamento) em descontos acima de 10%.",
+      "severidade": "media"
+    },
+    {
+      "chave": "taxa_ganho_baixa",
+      "titulo": "Taxa de ganho abaixo de 25%",
+      "quando": "fechados >= amostra_minima && taxa_ganho < 0.25",
+      "impacto": "(0.25 - taxa_ganho) * fechados * ticket_medio",
+      "acao": "Olhar os motivos de perda e o passo de negociação; apertar a qualificação antes da proposta.",
+      "severidade": "alta"
+    },
+    {
+      "chave": "no_show_alto",
+      "titulo": "Reuniões agendadas que não acontecem",
+      "quando": "amostra_coorte >= amostra_minima && passo_realizada < 0.7",
+      "impacto": "(0.7 - passo_realizada) * conv_agendada * amostra_coorte * (conv_ganho / conv_realizada) * ticket_medio",
+      "acao": "Confirmar a reunião um dia antes, lembrar no dia e ter uma regra de remarcação.",
+      "severidade": "media"
+    },
+    {
+      "chave": "pipeline_parado",
+      "titulo": "Dinheiro parado no pipeline",
+      "quando": "valor_parado > 0 && valor_parado >= 0.2 * valor_aberto",
+      "impacto": "valor_parado * taxa_ganho",
+      "acao": "Revisar os negócios parados um a um: avançar, reagendar ou encerrar.",
+      "severidade": "media"
+    },
+    {
+      "chave": "perda_por_preco",
+      "titulo": "Perdas concentradas em preço",
+      "quando": "valor_perdido > 0 && valor_perdido_preco / valor_perdido > 0.3",
+      "impacto": "valor_perdido_preco * taxa_ganho",
+      "acao": "Testar condição de pagamento ou um pacote menor antes de ceder no preço.",
+      "severidade": "media"
+    },
+    {
+      "chave": "cac_acima_da_margem",
+      "titulo": "Custo de aquisição maior que a margem da venda",
+      "quando": "vendas >= 1 && cac_medio > margem_percentual * ticket_medio",
+      "impacto": "(cac_medio - margem_percentual * ticket_medio) * vendas",
+      "acao": "Rever ou cortar os canais com pior CAC (veja o ROI por canal).",
+      "severidade": "alta"
+    },
+    {
+      "chave": "churn_alto",
+      "titulo": "Cancelamentos acima de 5% da receita recorrente",
+      "quando": "churn_receita > 0.05",
+      "impacto": "mrr_inicial * churn_receita * 12",
+      "acao": "Mapear os motivos de cancelamento e agir nas contas em risco antes da renovação.",
+      "severidade": "alta"
+    },
+    {
+      "chave": "ritmo_atras",
+      "titulo": "Metade do time ou mais atrás do ritmo",
+      "quando": "pct_atras >= 0.5 && dias_uteis_restantes > 0",
+      "impacto": "max(receita_esperada_ate_hoje - receita_ate_hoje, 0)",
+      "acao": "Abrir o plano do dia de quem está atrás e fazer o ajuste de contingência.",
+      "severidade": "alta"
+    },
+    {
+      "chave": "crescimento_com_desconto",
+      "titulo": "Crescimento comprado com desconto",
+      "tipo": "problema",
+      "dimensao": "contribuicao",
+      "mecanismo": "A receita sobe porque o desconto subiu: cada venda a mais custa margem que não volta.",
+      "condicoes": [
+        {
+          "met": "receita",
+          "op": "AUMENTOU",
+          "janela": 30,
+          "base": "media90",
+          "limiar": 10,
+          "banda": 3,
+          "amostraMin": 5,
+          "histerese": {
+            "folga": 2,
+            "dias": 14,
+            "intervalo": 14
+          }
+        },
+        {
+          "met": "desconto_medio",
+          "op": "AUMENTOU",
+          "janela": 30,
+          "base": "media90",
+          "limiar": 2,
+          "banda": 1,
+          "amostraMin": 10,
+          "histerese": {
+            "folga": 2,
+            "dias": 14,
+            "intervalo": 14
+          }
+        },
+        {
+          "met": "margem_contrib",
+          "op": "DIMINUIU",
+          "janela": 30,
+          "base": "media90",
+          "limiar": 2,
+          "banda": 1,
+          "amostraMin": 10,
+          "histerese": {
+            "folga": 2,
+            "dias": 14,
+            "intervalo": 14
+          }
+        },
+        {
+          "met": "custo_var_venda",
+          "op": "ESTAVEL",
+          "janela": 30,
+          "base": "media90",
+          "limiar": 2,
+          "banda": 2,
+          "amostraMin": 10,
+          "histerese": {
+            "folga": 2,
+            "dias": 14,
+            "intervalo": 14
+          }
+        }
+      ],
+      "essenciais": [
+        "desconto_medio",
+        "margem_contrib"
+      ],
+      "rivais": [
+        "mix_mudou"
+      ],
+      "distingue": "Se a margem caiu sem o desconto subir, é mix (ou custo), não desconto.",
+      "intervencoes": [
+        "teto_desconto",
+        "alcada_minimo"
+      ],
+      "impacto": "max(0, desconto_medio - desconto_medio_base) * receita / (1 - desconto_medio)",
+      "acao": "Travar a alçada de desconto por faixa de ticket e exigir contrapartida.",
+      "severidade": "alta"
+    },
+    {
+      "chave": "gargalo_fechamento",
+      "titulo": "Gargalo comercial no fechamento",
+      "tipo": "gargalo",
+      "dimensao": "receita",
+      "mecanismo": "Entrada e oportunidades estáveis, mas a conversão de proposta em venda caiu: o problema está no último passo.",
+      "condicoes": [
+        {
+          "met": "leads",
+          "op": "ESTAVEL",
+          "janela": 30,
+          "base": "media90",
+          "limiar": 30,
+          "banda": 15,
+          "amostraMin": 5,
+          "histerese": {
+            "folga": 2,
+            "dias": 14,
+            "intervalo": 14
+          }
+        },
+        {
+          "met": "oport",
+          "op": "ESTAVEL",
+          "janela": 30,
+          "base": "media90",
+          "limiar": 30,
+          "banda": 15,
+          "amostraMin": 5,
+          "histerese": {
+            "folga": 2,
+            "dias": 14,
+            "intervalo": 14
+          }
+        },
+        {
+          "met": "tx_fech",
+          "op": "DIMINUIU",
+          "janela": 30,
+          "base": "media90",
+          "limiar": 5,
+          "banda": 1,
+          "amostraMin": 10,
+          "histerese": {
+            "folga": 2,
+            "dias": 14,
+            "intervalo": 14
+          }
+        }
+      ],
+      "essenciais": [
+        "tx_fech"
+      ],
+      "rivais": [
+        "lead_pior",
+        "ticket_x_conversao"
+      ],
+      "distingue": "Se os leads subiram e a qualificação caiu, o lead piorou; se o ticket subiu junto, é preço.",
+      "intervencoes": [
+        "treino_fechamento",
+        "tratar_funil"
+      ],
+      "impacto": "max(0, (tx_fech_base - tx_fech) * oport * ticket)",
+      "acao": "Revisar as propostas em aberto uma a uma e treinar o passo de fechamento.",
+      "severidade": "alta"
+    },
+    {
+      "chave": "lead_pior",
+      "titulo": "Lead pior: mais volume, menos qualificação",
+      "tipo": "problema",
+      "dimensao": "receita",
+      "mecanismo": "Mais leads e mais reuniões, mas menos delas viram oportunidade: a qualidade da entrada caiu.",
+      "condicoes": [
+        {
+          "met": "leads",
+          "op": "AUMENTOU",
+          "janela": 30,
+          "base": "media90",
+          "limiar": 20,
+          "banda": 3,
+          "amostraMin": 5,
+          "histerese": {
+            "folga": 2,
+            "dias": 14,
+            "intervalo": 14
+          }
+        },
+        {
+          "met": "agendadas",
+          "op": "AUMENTOU",
+          "janela": 30,
+          "base": "media90",
+          "limiar": 10,
+          "banda": 3,
+          "amostraMin": 5,
+          "histerese": {
+            "folga": 2,
+            "dias": 14,
+            "intervalo": 14
+          }
+        },
+        {
+          "met": "tx_oport",
+          "op": "DIMINUIU",
+          "janela": 30,
+          "base": "media90",
+          "limiar": 5,
+          "banda": 1,
+          "amostraMin": 10,
+          "histerese": {
+            "folga": 2,
+            "dias": 14,
+            "intervalo": 14
+          }
+        }
+      ],
+      "essenciais": [
+        "tx_oport"
+      ],
+      "rivais": [
+        "gargalo_fechamento"
+      ],
+      "intervencoes": [
+        "roteiro_qualificacao"
+      ],
+      "impacto": "max(0, (tx_oport_base - tx_oport) * realizadas * tx_fech * ticket)",
+      "acao": "Olhar canal a canal de onde vieram os leads novos e apertar o roteiro de qualificação.",
+      "severidade": "media"
+    },
+    {
+      "chave": "ticket_x_conversao",
+      "titulo": "Ticket maior reduzindo a conversão",
+      "tipo": "hipotese",
+      "dimensao": "receita",
+      "mecanismo": "O ticket subiu e a conversão caiu junto: o ganho por venda pode não compensar as vendas perdidas.",
+      "condicoes": [
+        {
+          "met": "ticket",
+          "op": "AUMENTOU",
+          "janela": 30,
+          "base": "media90",
+          "limiar": 10,
+          "banda": 3,
+          "amostraMin": 5,
+          "histerese": {
+            "folga": 2,
+            "dias": 14,
+            "intervalo": 14
+          }
+        },
+        {
+          "met": "tx_fech",
+          "op": "DIMINUIU",
+          "janela": 30,
+          "base": "media90",
+          "limiar": 5,
+          "banda": 1,
+          "amostraMin": 10,
+          "histerese": {
+            "folga": 2,
+            "dias": 14,
+            "intervalo": 14
+          }
+        }
+      ],
+      "essenciais": [
+        "ticket",
+        "tx_fech"
+      ],
+      "rivais": [
+        "gargalo_fechamento"
+      ],
+      "intervencoes": [
+        "teto_desconto"
+      ],
+      "impacto": "oport * (tx_fech_base * ticket_base - tx_fech * ticket)",
+      "acao": "Comparar a conversão por faixa de ticket antes de mexer no preço.",
+      "severidade": "media"
+    },
+    {
+      "chave": "produtividade_sem_resultado",
+      "titulo": "Produtividade crescendo sem resultado",
+      "tipo": "contradicao",
+      "dimensao": "capacidade",
+      "mecanismo": "Mais contatos e mais reuniões sem mais vendas: esforço indo para o lugar errado.",
+      "condicoes": [
+        {
+          "met": "contatos",
+          "op": "AUMENTOU",
+          "janela": 30,
+          "base": "media90",
+          "limiar": 15,
+          "banda": 3,
+          "amostraMin": 5,
+          "histerese": {
+            "folga": 2,
+            "dias": 14,
+            "intervalo": 14
+          }
+        },
+        {
+          "met": "realizadas",
+          "op": "AUMENTOU",
+          "janela": 30,
+          "base": "media90",
+          "limiar": 10,
+          "banda": 3,
+          "amostraMin": 5,
+          "histerese": {
+            "folga": 2,
+            "dias": 14,
+            "intervalo": 14
+          }
+        },
+        {
+          "met": "vendas",
+          "op": "ESTAVEL",
+          "janela": 30,
+          "base": "media90",
+          "limiar": 20,
+          "banda": 10,
+          "amostraMin": 3,
+          "histerese": {
+            "folga": 2,
+            "dias": 14,
+            "intervalo": 14
+          }
+        }
+      ],
+      "essenciais": [
+        "vendas"
+      ],
+      "rivais": [
+        "gargalo_fechamento",
+        "lead_pior"
+      ],
+      "intervencoes": [
+        "treino_fechamento"
+      ],
+      "acao": "Ver onde o volume extra está parando no funil antes de pedir mais atividade.",
+      "severidade": "media"
+    },
+    {
+      "chave": "mix_mudou",
+      "titulo": "Mix alterou a qualidade da receita",
+      "tipo": "investigacao",
+      "dimensao": "contribuicao",
+      "mecanismo": "Receita e desconto estáveis, margem em queda: o que mudou foi o que se vende, não quanto.",
+      "condicoes": [
+        {
+          "met": "receita",
+          "op": "ESTAVEL",
+          "janela": 30,
+          "base": "media90",
+          "limiar": 20,
+          "banda": 10,
+          "amostraMin": 5,
+          "histerese": {
+            "folga": 2,
+            "dias": 14,
+            "intervalo": 14
+          }
+        },
+        {
+          "met": "margem_contrib",
+          "op": "DIMINUIU",
+          "janela": 30,
+          "base": "media90",
+          "limiar": 2,
+          "banda": 1,
+          "amostraMin": 10,
+          "histerese": {
+            "folga": 2,
+            "dias": 14,
+            "intervalo": 14
+          }
+        },
+        {
+          "met": "desconto_medio",
+          "op": "ESTAVEL",
+          "janela": 30,
+          "base": "media90",
+          "limiar": 2,
+          "banda": 1,
+          "amostraMin": 10,
+          "histerese": {
+            "folga": 2,
+            "dias": 14,
+            "intervalo": 14
+          }
+        }
+      ],
+      "essenciais": [
+        "margem_contrib"
+      ],
+      "rivais": [
+        "crescimento_com_desconto"
+      ],
+      "impacto": "max(0, margem_contrib_base - margem_contrib) * receita",
+      "acao": "Abrir a margem por tipo de negócio e canal antes de concluir.",
+      "severidade": "media"
+    },
+    {
+      "chave": "crescimento_consumindo_caixa",
+      "titulo": "Crescimento comercial consumindo caixa",
+      "tipo": "risco",
+      "dimensao": "caixa",
+      "mecanismo": "A receita sobe, mas os recebíveis e o prazo sobem mais: vender mais está drenando o caixa.",
+      "condicoes": [
+        {
+          "met": "receita",
+          "op": "AUMENTOU",
+          "janela": 30,
+          "base": "media90",
+          "limiar": 10,
+          "banda": 3,
+          "amostraMin": 5,
+          "histerese": {
+            "folga": 2,
+            "dias": 14,
+            "intervalo": 14
+          }
+        },
+        {
+          "met": "recebiveis",
+          "op": "AUMENTOU",
+          "janela": 30,
+          "base": "media90",
+          "limiar": 15,
+          "banda": 3,
+          "amostraMin": 5,
+          "histerese": {
+            "folga": 2,
+            "dias": 14,
+            "intervalo": 14
+          }
+        },
+        {
+          "met": "prazo_receb",
+          "op": "AUMENTOU",
+          "janela": 30,
+          "base": "media90",
+          "limiar": 10,
+          "banda": 3,
+          "amostraMin": 5,
+          "histerese": {
+            "folga": 2,
+            "dias": 14,
+            "intervalo": 14
+          }
+        },
+        {
+          "met": "caixa_oper",
+          "op": "DIMINUIU",
+          "janela": 30,
+          "base": "media90",
+          "limiar": 10,
+          "banda": 3,
+          "amostraMin": 3,
+          "histerese": {
+            "folga": 2,
+            "dias": 14,
+            "intervalo": 14
+          }
+        }
+      ],
+      "essenciais": [
+        "receita",
+        "recebiveis"
+      ],
+      "intervencoes": [
+        "aumentar_entrada"
+      ],
+      "impacto": "exposicao",
+      "requer": [
+        "recebiveis"
+      ],
+      "acao": "Rever a condição de pagamento das vendas novas e a entrada mínima.",
+      "severidade": "alta"
+    },
+    {
+      "chave": "entrada_caiu",
+      "titulo": "Entrada de leads caindo",
+      "tipo": "risco",
+      "dimensao": "receita",
+      "mecanismo": "Menos leads hoje são menos vendas daqui a um ciclo.",
+      "condicoes": [
+        {
+          "met": "leads",
+          "op": "DIMINUIU",
+          "janela": 30,
+          "base": "media90",
+          "limiar": 15,
+          "banda": 3,
+          "amostraMin": 5,
+          "histerese": {
+            "folga": 2,
+            "dias": 14,
+            "intervalo": 14
+          }
+        }
+      ],
+      "essenciais": [
+        "leads"
+      ],
+      "rivais": [
+        "lead_pior"
+      ],
+      "impacto": "max(0, leads_base - leads) * tx_lead_venda * ticket",
+      "acao": "Checar as campanhas e canais antes que o efeito chegue no fechamento.",
+      "severidade": "media"
+    }
+  ],
+  "intervencoes": [
+    {
+      "chave": "teto_desconto",
+      "nome": "Teto de desconto por faixa de ticket",
+      "impacto": {
+        "receita": "0",
+        "conversao": "−",
+        "margem": "++"
+      },
+      "esforco": 1
+    },
+    {
+      "chave": "alcada_minimo",
+      "nome": "Alçada para venda abaixo do mínimo",
+      "impacto": {
+        "conversao": "−",
+        "margem": "+"
+      },
+      "esforco": 1
+    },
+    {
+      "chave": "roteiro_qualificacao",
+      "nome": "Roteiro de qualificação na primeira reunião",
+      "impacto": {
+        "conversao": "++"
+      },
+      "esforco": 2
+    },
+    {
+      "chave": "treino_fechamento",
+      "nome": "Treino do passo de fechamento",
+      "impacto": {
+        "receita": "++"
+      },
+      "esforco": 2
+    },
+    {
+      "chave": "tratar_funil",
+      "nome": "Tratar o funil existente (propostas paradas)",
+      "impacto": {
+        "conversao": "+"
+      },
+      "esforco": 1
+    },
+    {
+      "chave": "aumentar_entrada",
+      "nome": "Aumentar a entrada mínima",
+      "impacto": {
+        "conversao": "−",
+        "caixa": "++"
+      },
+      "esforco": 2
+    }
+  ],
+  "compostos": [
+    {
+      "chave": "margem_perdida_duas_vezes",
+      "nome": "Margem perdida duas vezes",
+      "de": [
+        "crescimento_com_desconto",
+        "mix_mudou"
+      ],
+      "tipo": "problema",
+      "dimensao": "contribuicao",
+      "relacao": "desconto → margem ← mix"
+    },
+    {
+      "chave": "funil_inflado",
+      "nome": "Funil inflado sem venda",
+      "de": [
+        "lead_pior",
+        "produtividade_sem_resultado"
+      ],
+      "tipo": "contradicao",
+      "dimensao": "capacidade"
+    }
   ]
 }
