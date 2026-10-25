@@ -30,6 +30,9 @@
       ],
       "@lab/dia": [
         "packages/dia/src/index.ts"
+      ],
+      "@lab/estrategia": [
+        "packages/estrategia/src/index.ts"
       ]
     }
   },

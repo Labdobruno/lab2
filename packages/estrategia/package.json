@@ -1,0 +1,9 @@
+{
+  "name": "@lab/estrategia",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "dependencies": { "@lab/nucleo": "*", "@lab/metricas": "*", "@lab/planejamento": "*", "@lab/ciclos": "*", "postgres": "3.4.9" }
+}
