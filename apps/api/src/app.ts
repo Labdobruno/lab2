@@ -77,6 +77,13 @@
      GET  /admin/operacoes/:slug/estrategia/historico | marcos?pessoa=nome
      GET  /admin/operacoes/:slug/metas-historicas?n=13 | /ano | /intervalo?de=&ate=     meta oficial por ciclo (D16–D20), ano, intervalo
      POST /admin/operacoes/:slug/metas-historicas/registrar { cicloInicio } | /revisar { cicloInicio, tipo?, receita?, justificativa, origem?, limitacoes? }
+     GET  /admin/operacoes/:slug/economia?de=&ate=         "quanto sobra de cada venda?": painel do período (padrão: ciclo da data)
+     GET|POST /admin/operacoes/:slug/economia/politica     vigente e versões | publica versão { motivo, margemAlvo?, margemMinima?, descontoMaximo?, custoCapitalMes?, custosFixosMes?, lucroDesejadoMes?, comissao?, linhas?, condicoes? }
+     POST /admin/operacoes/:slug/economia/precificar       { custos: [{ chave, valor, categoria? }], comissaoFixa? } preço recomendado e piso por condição (não grava)
+     GET  /admin/operacoes/:slug/economia/negocios?de=&ate= negócios do período (ganhos) e abertos em proposta/negociação
+     GET  /admin/operacoes/:slug/economia/negocios/:id     economia do negócio: referência, aprovado, fechado (política congelada), exceção, previsto × real × efetiva
+     POST /admin/operacoes/:slug/economia/negocios/:id/preco  { momento, valor, condicao?, custos?, comissaoFixa?, motivo?, em? }  fora da alçada exige motivo
+     POST /admin/operacoes/:slug/economia/negocios/:id/custo  { chave, valor, categoria?, nota?, completo?, em? }  custo real lançado (só acréscimo)
      GET  /admin/operacoes/:slug/plano-ciclo?data=         plano do ciclo: original, versões, vigente
      POST /admin/operacoes/:slug/plano-ciclo/ativar | replanejar { corte, motivo, metas } | fechar */
 import { FUNCOES_PESSOA, resolverPack, VARIAVEIS, type PackResolvido } from '@lab/nucleo';
@@ -107,6 +114,7 @@ import {
   ativarPlano, encerrarQuarter, ErroDeEstrategia, estrategiaDoQuarter, fecharMesDoQuarter, fecharPlano, historicoDoQuarter, levarMetasAosCiclos, marcosParaODia, metaDoAno, metaIntervalo, metasHistoricas,
   planoDoCiclo, publicarEstrategia, registrarAprendizadoDoQuarter, registrarEncerramento, replanejarCiclo, revisarMeta, salvarEstrategia, tiqueMetas,
 } from '@lab/estrategia';
+import { economiaDoNegocio, ErroDeEconomia, lancarCustoReal, painelEconomia, politicasDaOperacao, precificar, publicarPolitica, registrarPreco } from '@lab/economia';
 import { garantirMigracoes } from './migracoes.js';
 import { MIGRACOES } from './migracoes.gen.js';
 import type { Sql } from 'postgres';
@@ -244,6 +252,39 @@ export function criarApp(opts: { sql: Sql; env: Ambiente; fetch?: typeof fetch; 
           }
         } catch (e) {
           if (e instanceof ErroDeMemoria) return erro(e.message, e.status);
+          throw e;
+        }
+      }
+      if (id && acao === 'economia') {
+        const op = await operacaoPlanejamento(sql, id);
+        if (!op) return erro('operação não encontrada', 404);
+        const agora = (opts.agora ?? (() => new Date()))(), hoje = hojeNoFuso(op.fuso, agora);
+        const data = url.searchParams.get('data') ?? hoje;
+        if (!dataValida(data)) return erro('data deve ser AAAA-MM-DD');
+        const ciclo = cicloDaOperacao(op, data), de = url.searchParams.get('de') ?? ciclo.inicio, ate = url.searchParams.get('ate') ?? ciclo.fim;
+        if (!dataValida(de) || !dataValida(ate)) return erro('de e ate devem ser AAAA-MM-DD');
+        const quem = req.headers.get('x-lab-por')?.slice(0, 80) ?? null;
+        try {
+          if (!sub && m === 'GET') return json(await painelEconomia(sql, op, de, ate));
+          if (sub === 'politica' && m === 'GET') { const P = await politicasDaOperacao(sql, op.id); return json({ vigente: P.vigente, versoes: P.lista.map(p => ({ versao: p.versao, publicadaEm: p.publicadaEm, por: p.por, motivo: p.motivo, margemAlvo: p.margemAlvo, margemMinima: p.margemMinima })) }); }
+          if (sub === 'politica' && m === 'POST') { const b = await corpoJSON(req); const { motivo, ...patch } = b as Record<string, unknown> & { motivo?: string }; return json(await publicarPolitica(sql, op.id, patch as never, quem, String(motivo ?? '')), 201); }
+          if (sub === 'precificar' && m === 'POST') { const b = await corpoJSON(req); return json(await precificar(sql, op.id, { custos: b.custos, comissaoFixa: b.comissaoFixa == null ? null : Number(b.comissaoFixa) })); }
+          if (sub === 'negocios' && !partes[4] && m === 'GET') {
+            const L = await sql<any[]>`select n.id, n.status, n.valor_fechado, n.valor_estimado, n.fechado_em, p.nome as dono, e.papel, coalesce(k.nome, n.atributos->>'cliente', 'Negócio') as nome,
+                exists (select 1 from lab.preco_negocio x where x.negocio_id = n.id and x.momento = 'fechado') as com_preco
+              from lab.negocio n join lab.funil f on f.id = n.funil_id join lab.etapa e on e.id = n.etapa_id left join lab.pessoa p on p.id = n.dono_id left join lab.conta k on k.id = n.conta_id
+              where n.operacao_id = ${op.id} and f.principal and n.tipo = 'novo' and ((n.status = 'ganho' and (n.fechado_em at time zone ${op.fuso})::date >= ${de}::date and (n.fechado_em at time zone ${op.fuso})::date < ${ate}::date) or (n.status = 'aberto' and e.papel in ('oportunidade', 'proposta', 'negociacao')))
+              order by n.status, n.fechado_em desc nulls last, n.criado_em desc limit 200`;
+            return json(L.map(n => ({ id: n.id, nome: n.nome, status: n.status, papel: n.papel, dono: n.dono, valor: n.valor_fechado == null ? (n.valor_estimado == null ? null : Number(n.valor_estimado)) : Number(n.valor_fechado), fechadoEm: n.fechado_em ? new Date(n.fechado_em).toISOString() : null, comPreco: n.com_preco })));
+          }
+          if (sub === 'negocios' && partes[4] && UUID.test(partes[4])) {
+            const neg = partes[4];
+            if (!partes[5] && m === 'GET') return json(await economiaDoNegocio(sql, op, neg));
+            if (partes[5] === 'preco' && m === 'POST') { const b = await corpoJSON(req); return json(await registrarPreco(sql, op, neg, { momento: String(b.momento ?? ''), valor: b.valor, condicao: typeof b.condicao === 'string' && b.condicao ? b.condicao : null, custos: b.custos, comissaoFixa: b.comissaoFixa == null || b.comissaoFixa === '' ? null : Number(b.comissaoFixa), motivo: typeof b.motivo === 'string' ? b.motivo : null, por: quem, em: typeof b.em === 'string' ? b.em : null }), 201); }
+            if (partes[5] === 'custo' && m === 'POST') { const b = await corpoJSON(req); return json(await lancarCustoReal(sql, op, neg, { chave: String(b.chave ?? ''), valor: b.valor, categoria: typeof b.categoria === 'string' && b.categoria ? b.categoria : null, nota: typeof b.nota === 'string' ? b.nota : null, completo: b.completo === true, por: quem, em: typeof b.em === 'string' ? b.em : null }), 201); }
+          }
+        } catch (e) {
+          if (e instanceof ErroDeEconomia) return erro(e.message, e.status);
           throw e;
         }
       }

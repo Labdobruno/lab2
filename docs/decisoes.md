@@ -89,3 +89,13 @@ Cada decisão tem o porquê, para não ser refeita sem motivo.
 - **Evidência de meta na V2 vai além da V1**: como `lab.meta` só acrescenta e tem `criado_em`, a meta cadastrada durante o ciclo prova a meta em vigor na época; o Fechamento do dia passa a gravar `ref.meta`; a rotina observa a meta de hoje uma vez por dia e registra ciclos encerrados até 3 ciclos para trás.
 - **Ticket entra como "taxa"** para amostra (como na V1): iniciativa cujo indicador é o ticket só valida a hipótese com n ≥ amostra mínima do pack.
 - **A tela antiga do quarter em 6 passos (programa de ciclos pelo build-up) continua** em **Mais › Programa de ciclos**; a nova **Quarter** é a estratégia.
+
+## Onda 4: economia da venda
+
+- **O motor só soma; a política decide.** Deduções, condições e comissão são configuração (pack ou publicação da operação). Regras da solar (kit fora da base do imposto, 60/40, antecipação) viram linhas e condições, nunca código.
+- **MC % sobre a receita líquida, uma vez só.** A % sobre o preço existe, nomeada ao lado. O `relatorio` das métricas e o dicionário passam a apontar para `@lab/economia` como dono de preço, margem, comissão e deduções.
+- **Valor de dedução informado na venda vale por cima do percentual da política.** É fato da venda (ex.: imposto efetivamente destacado). A V1 proibia ajustar imposto no orçamento por decisão da Amicta; no LAB genérico a venda manda e a política é o padrão.
+- **Preço recomendado por bissecção, não por fórmula fechada.** Serve a qualquer política; a fórmula da V1 é caso particular, provado no teste de ida e volta. O recomendado mira a MC bruta % (sem o custo do prazo, que fica como linha própria).
+- **Sem contas a pagar.** O custo real é lançado à mão e rotulado; só vira efetivo quando marcado completo. Até lá a conta prevista vale.
+- **Exceção não barra, registra.** Abaixo do piso ou acima do desconto máximo exige motivo e grava quem, por quê e quanto custou de MC. O painel mostra.
+- **D21 com bom senso:** só meses terminados, a partir do primeiro mês lançado do canal, cobram investimento. Senão qualquer janela histórica anularia CAC e ROI.
