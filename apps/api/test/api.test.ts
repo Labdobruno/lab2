@@ -208,6 +208,28 @@ describe.skipIf(semBanco)('API', () => {
     expect((await chamar('GET', '/admin/operacoes/nao-existe/studio/observado')).status).toBe(404);
   });
 
+  it('inteligência v3 e pessoas pela API', async () => {
+    await chamar('POST', '/admin/operacoes', { slug: 'in6', nome: 'Int 6', packId: 'base' });
+    const R = await (await chamar('GET', '/admin/operacoes/in6/inteligencia?data=2026-10-24')).json() as any;
+    expect(R.biblioteca).toBeGreaterThan(8); expect(R.orcamento.visiveis).toEqual([]); expect(R.saude.regras).toBe(R.biblioteca);
+    expect(R.achados.find((a: any) => a.codigo === 'crescimento_consumindo_caixa').estado).toBe('nao_avaliavel');
+    expect(R.avisos.some((a: string) => /margem/.test(a))).toBe(true);
+    expect((await chamar('POST', '/admin/operacoes/in6/inteligencia/marcas', { codigo: 'desconto_alto', estado: 'tratamento', motivo: 'alçada em revisão' })).status).toBe(201);
+    expect((await chamar('POST', '/admin/operacoes/in6/inteligencia/marcas', { codigo: 'x', estado: 'qualquer' })).status).toBe(400);
+    expect(((await (await chamar('POST', '/admin/operacoes/in6/inteligencia/regras/desconto_alto', { estado: 'sombra' })).json()) as any).estado).toBe('sombra');
+    expect((await chamar('POST', '/admin/operacoes/in6/inteligencia/contexto', { data: '2026-10-20', areas: ['Marketing'], descricao: 'Campanha de outubro' })).status).toBe(201);
+    const C = await (await chamar('GET', '/admin/operacoes/in6/inteligencia/contexto?data=2026-10-24')).json() as any; expect(C.eventos.length).toBe(1); expect(C.areas).toContain('Comercial');
+    expect((await chamar('POST', `/admin/operacoes/in6/inteligencia/contexto/${C.eventos[0].id}/apagar`, {})).status).toBe(200);
+    const A = await (await chamar('GET', '/admin/operacoes/in6/inteligencia/acuracia?data=2026-10-24')).json() as any; expect(A.geral).toBeNull();
+    const W = await (await chamar('GET', '/admin/operacoes/in6/inteligencia/waterfall?data=2026-10-24')).json() as any; expect(W.receita.total).toBe(0);
+    const P = await (await chamar('GET', '/admin/operacoes/in6/inteligencia/pessoas?data=2026-10-24')).json() as any; expect(P.pessoas).toEqual([]); expect(P.etapas.length).toBe(7);
+    expect((await chamar('GET', '/admin/operacoes/in6/inteligencia/pessoas/drill?data=2026-10-24&i=99')).status).toBe(400);
+    expect((await chamar('GET', '/admin/operacoes/in6/inteligencia/pessoas?de=2026-12-01&ate=2026-10-01')).status).toBe(400);
+    const r = await rodadaAgendada({ sql, env: { ADMIN_TOKEN: TOKEN } });
+    expect(['avaliado', 'em_dia']).toContain((r['inteligencia:in6'] as any).status);
+    expect((await rodadaAgendada({ sql, env: { ADMIN_TOKEN: TOKEN } }))['inteligencia:in6']).toMatchObject({ status: 'em_dia' });   // uma avaliação por dia
+  });
+
   it('studio em blocos e construtor "e se" pela API', async () => {
     await chamar('POST', '/admin/operacoes', { slug: 'st5', nome: 'Studio 5', packId: 'base' });
     const obs = await (await chamar('GET', '/admin/operacoes/st5/studio/modelo-observado?data=2026-10-24')).json() as any;
@@ -286,7 +308,7 @@ describe.skipIf(semBanco)('API', () => {
 
   it('rodada agendada processa todos os conectores ativos', async () => {
     const r = await rodadaAgendada({ sql, env: { ADMIN_TOKEN: TOKEN } });
-    expect(Object.keys(r).filter(k => !k.startsWith('fechamento:') && !k.startsWith('metas:')).sort()).toEqual(['n8n', 'planilhas']);
+    expect(Object.keys(r).filter(k => !k.startsWith('fechamento:') && !k.startsWith('metas:') && !k.startsWith('inteligencia:')).sort()).toEqual(['n8n', 'planilhas']);
     expect(Object.keys(r).filter(k => k.startsWith('fechamento:')).length).toBeGreaterThan(0);   // o tique do Fechamento do dia roda por operação
   });
 });

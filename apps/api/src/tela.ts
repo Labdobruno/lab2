@@ -9,6 +9,7 @@ import { TELA_CICLO } from './tela_ciclo.js';
 import { TELA_ESTRATEGIA } from './tela_estrategia.js';
 import { TELA_ECONOMIA } from './tela_economia.js';
 import { TELA_CONSTRUTOR } from './tela_construtor.js';
+import { TELA_INTELIGENCIA } from './tela_inteligencia.js';
 
 export const PAGINA = `<!doctype html>
 <html lang="pt-BR">
@@ -107,7 +108,7 @@ function controles(){
 }
 function abas(){
   function b(id,t){var x=el('button',{type:'button',texto:t,onclick:function(){estado.aba=id;estado.pessoa=null;desenhar()}});if(estado.aba===id)x.setAttribute('aria-current','page');return x}
-  var mais=[['quarter','Quarter'],['construtor','E se…?'],['studio','Studio'],['economia','Economia'],['metashist','Metas históricas'],['equipe','Equipe e metas'],['programa','Programa de ciclos'],['fechamento','Fechar ciclo'],['achados','Achados'],['dados','Dados'],['funis','Funis e campanhas'],['operacoes','Operações'],['ritmo','Ritmo (antigo)']];
+  var mais=[['inteligencia','Inteligência'],['quarter','Quarter'],['construtor','E se…?'],['studio','Studio'],['economia','Economia'],['metashist','Metas históricas'],['equipe','Equipe e metas'],['programa','Programa de ciclos'],['fechamento','Fechar ciclo'],['achados','Achados'],['dados','Dados'],['funis','Funis e campanhas'],['operacoes','Operações'],['ritmo','Ritmo (antigo)']];
   var atual=mais.filter(function(m){return m[0]===estado.aba})[0];
   var d=el('details',{class:'mais'},[el('summary',{texto:atual?atual[1]+' ▾':'Mais ▾'})].concat(mais.map(function(m){return b(m[0],m[1])})));
   if(atual)d.setAttribute('open','');
@@ -135,6 +136,7 @@ async function desenhar(){
   if(estado.aba==='operacoes')return telaOperacoes();
   if(estado.aba==='studio')return telaStudioM();
   if(estado.aba==='construtor')return telaConstrutor();
+  if(estado.aba==='inteligencia')return telaInteligencia();
   if(estado.aba==='funis')return telaStudio();
   app.appendChild(el('p',{class:'suave',texto:'Carregando…'}));
   var q=estado.data?('?data='+encodeURIComponent(estado.data)):'';
@@ -630,6 +632,7 @@ ${TELA_CICLO}
 ${TELA_ESTRATEGIA}
 ${TELA_ECONOMIA}
 ${TELA_CONSTRUTOR}
+${TELA_INTELIGENCIA}
 async function iniciar(){
   if(!ler('token'))return telaEntrada();
   limpar();app.appendChild(el('p',{class:'suave',texto:'Carregando…'}));

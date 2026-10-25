@@ -110,3 +110,11 @@ Cada decisão tem o porquê, para não ser refeita sem motivo.
 - **O monitor não atribui causa a pessoa.** "A causa precisa de evidência adicional"; o diagnóstico mostra onde está o desvio e o que investigar.
 - **Premissas ao plano é ação explícita**, como levar metas aos ciclos: grava `quarter_estrategia.doc.premissas` com a origem (modelo, publicação, cenário).
 
+## Onda 6: inteligência
+
+- **Dois formatos de hipótese no mesmo pack.** A simples (`quando`) continua valendo; a estruturada (`condicoes`) ganha histerese, confiança, rivais e impacto na mesma moeda. O resolver confere métricas, referências e variáveis das fórmulas.
+- **O motor não lê banco.** `medir(id, a, b)` é injetado; a V2 fornece um medidor sobre o modelo canônico. O que não tem fonte responde "ausente" e a hipótese lista o que falta: nunca zero, nunca inventado.
+- **Marca expira em 1,5×.** "Não procede" ou "aceito" tira o achado da lista até o impacto crescer 1,5× sobre a referência do dia da marca (como na V1). Marcas são só acréscimo.
+- **Uma observação por mudança de estado.** A saúde conta disparos reais, não execuções do cron.
+- **Benchmark é quartil superior de quem tem amostra.** Receita potencial é efeito isolado por etapa e a tela diz "simulada, não garantida".
+- **Associação não é causa.** Alertas, matriz e canvas repetem a frase; a inferência trava o verbo pelo nível de evidência.

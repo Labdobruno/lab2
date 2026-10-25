@@ -51,6 +51,14 @@
      POST /admin/operacoes/:slug/construtor                     { sujeito?, de?, ate?, clausulas[], res?, tempo?, meta? }  a pergunta "e se…?" (não grava)
      GET|POST /admin/operacoes/:slug/construtor/perguntas       perguntas salvas { nome, sujeito, periodo, clausulas, res }; POST …/perguntas/:id/apagar
      POST /admin/operacoes/:slug/construtor/experimento         { titulo?, sujeito?, de?, ate?, clausulas[], fimPrevisto?, decisaoId? }  a 1ª condição vira métrica e alvo
+     GET  /admin/operacoes/:slug/inteligencia?data=            achados v3 (condições, confiança, rivais, compostos, intervenções), orçamento de atenção, contexto, saúde
+     POST /admin/operacoes/:slug/inteligencia/marcas          { codigo, estado: tratamento|aceito|naoprocede|limpa, motivo?, ref? }
+     POST /admin/operacoes/:slug/inteligencia/regras/:codigo  { estado?: ativa|sombra|aposentada|rascunho, params?: { met: { limiar, banda, amostraMin, janela, ref } } }
+     GET|POST /admin/operacoes/:slug/inteligencia/contexto    diário de contexto { data, areas[], descricao }; POST …/contexto/:id/apagar
+     GET  /admin/operacoes/:slug/inteligencia/acuracia?data=  acurácia do forecast pelos fechamentos do dia, por ciclo encerrado
+     GET  /admin/operacoes/:slug/inteligencia/waterfall?data= ponte de receita e de margem deste ciclo contra o anterior
+     GET  /admin/operacoes/:slug/inteligencia/pessoas?de=&ate=&minN=   benchmark, receita potencial, gargalos, alertas, matriz
+     GET  …/inteligencia/pessoas/comparar?v=&cmp= | drill?i=&foco= | leads?i=&foco= | meta?meta=&foco=;  POST …/pessoas/transferir { a, b, marcadas[] }
      GET  /admin/operacoes/:slug/quarter?data=  plano do quarter: passos, cenários e programa de ciclos
      POST /admin/operacoes/:slug/quarter        inicia o quarter (passo 1)        ?data=
      GET  /admin/operacoes/:slug/quarter/diagnostico                              passo 1: o quarter anterior
@@ -114,6 +122,8 @@ import {
 } from '@lab/ciclos';
 import {
   avaliarHipoteses, checarQualidade, concluirExperimento, decisoes, ErroDeMemoria, experimentos, iniciarExperimento, montarContexto, registrarDecisao,
+  acuraciaDaOperacao, apagarContexto, AREAS_CONTEXTO, avaliarOperacao, calibrarRegra, compararPessoa, contextoEventos, drillPessoas, ELEGIBILIDADE_NOME, ErroDeInteligencia, ErroDePessoas,
+  leadsPessoas, marcarAchado, metaReversaPessoas, painelPessoas, periodoPessoas, registrarContexto, saudeDaOperacao, TIPOS_ACHADO_NOME, transferirPerformance, waterfallDoCiclo, type Biblioteca, type HipoteseV3,
 } from '@lab/hipoteses';
 import {
   apagarPergunta, arquivarModelo, campanhas, criarCampanha, encerrarCampanha, ErroDeStudio, funisSalvos, grafoObservado, grafoSalvo, iniciarCampanha, levarPremissasAoPlano, modeloDoStudio,
@@ -309,6 +319,43 @@ export function criarApp(opts: { sql: Sql; env: Ambiente; fetch?: typeof fetch; 
           if (sub === 'experimento' && m === 'POST') return json(await virarExperimento(sql, op, data, await corpoJSON(req)), 201);
         } catch (e) {
           if (e instanceof ErroDeStudio || e instanceof ErroDeMemoria) return erro(e.message, e.status);
+          throw e;
+        }
+      }
+      if (id && acao === 'inteligencia') {
+        const op = await operacaoPlanejamento(sql, id);
+        if (!op) return erro('operação não encontrada', 404);
+        const agora = (opts.agora ?? (() => new Date()))(), hoje = hojeNoFuso(op.fuso, agora);
+        const data = url.searchParams.get('data') ?? hoje;
+        if (!dataValida(data)) return erro('data deve ser AAAA-MM-DD');
+        const quem = req.headers.get('x-lab-por')?.slice(0, 80) ?? null;
+        const ts = data === hoje ? agora.getTime() : Date.parse(data + 'T23:59:00Z');
+        try {
+          if (!sub && m === 'GET') {
+            const bib = await bibliotecaV3(sql, op);
+            const ctx = await montarContexto(sql, op, data, { amostraMinima: bib.amostraMinima });
+            const R = await avaliarOperacao(sql, op, bib, ts, ctx, { persistir: data === hoje });
+            const S = await saudeDaOperacao(sql, op, R.achados);
+            return json({ ...R, saude: S, areas: AREAS_CONTEXTO, tipos: TIPOS_ACHADO_NOME, elegibilidade: ELEGIBILIDADE_NOME, orcamentoN: bib.orcamento, biblioteca: bib.hipoteses.length });
+          }
+          if (sub === 'marcas' && m === 'POST') return json(await marcarAchado(sql, op, { ...(await corpoJSON(req) as Record<string, unknown>), por: quem } as never), 201);
+          if (sub === 'regras' && partes[4] && m === 'POST') return json(await calibrarRegra(sql, op, decodeURIComponent(partes[4]), { ...(await corpoJSON(req)), por: quem }));
+          if (sub === 'contexto' && !partes[4] && m === 'GET') { const de = url.searchParams.get('de') ?? somarDias(data, -120), ate = url.searchParams.get('ate') ?? data; if (!dataValida(de) || !dataValida(ate)) return erro('de e ate devem ser AAAA-MM-DD'); return json({ eventos: await contextoEventos(sql, op, de, ate), areas: AREAS_CONTEXTO }); }
+          if (sub === 'contexto' && !partes[4] && m === 'POST') return json(await registrarContexto(sql, op, { ...(await corpoJSON(req) as Record<string, unknown>), por: quem } as never), 201);
+          if (sub === 'contexto' && partes[4] && partes[5] === 'apagar' && m === 'POST') return json(await apagarContexto(sql, op, partes[4]));
+          if (sub === 'acuracia' && m === 'GET') return json(await acuraciaDaOperacao(sql, op, data));
+          if (sub === 'waterfall' && m === 'GET') return json(await waterfallDoCiclo(sql, op, data));
+          if (sub === 'pessoas') {
+            const per = periodoPessoas(op, url.searchParams.get('de'), url.searchParams.get('ate'), data), minN = Math.max(1, Number(url.searchParams.get('minN')) || 5), foco = url.searchParams.get('foco') || null;
+            if (!partes[4] && m === 'GET') return json(await painelPessoas(sql, op, per.de, per.ate, ts, minN));
+            if (partes[4] === 'comparar' && m === 'GET') return json(await compararPessoa(sql, op, per.de, per.ate, url.searchParams.get('v') ?? '', url.searchParams.get('cmp') ?? 'equipe', minN));
+            if (partes[4] === 'transferir' && m === 'POST') { const b = await corpoJSON(req); return json(await transferirPerformance(sql, op, per.de, per.ate, String(b.a ?? ''), String(b.b ?? ''), b.marcadas, minN)); }
+            if (partes[4] === 'drill' && m === 'GET') return json(await drillPessoas(sql, op, per.de, per.ate, Number(url.searchParams.get('i')), foco, minN));
+            if (partes[4] === 'leads' && m === 'GET') return json(await leadsPessoas(sql, op, per.de, per.ate, Number(url.searchParams.get('i')), foco, minN));
+            if (partes[4] === 'meta' && m === 'GET') return json(await metaReversaPessoas(sql, op, per.de, per.ate, Number(url.searchParams.get('meta')), foco, minN));
+          }
+        } catch (e) {
+          if (e instanceof ErroDeInteligencia || e instanceof ErroDePessoas || e instanceof ErroDeMemoria) return erro(e.message, e.status);
           throw e;
         }
       }
@@ -665,6 +712,20 @@ export function criarApp(opts: { sql: Sql; env: Ambiente; fetch?: typeof fetch; 
 }
 
 /* rodada do cron: sincroniza quem sabe sincronizar e reprocessa pendências de todos */
+/* a biblioteca v3 da operação: hipóteses (simples e estruturadas), intervenções e compostos do pack resolvido */
+export async function bibliotecaV3(sql: Sql, op: { id: string }): Promise<Biblioteca & { amostraMinima: number; orcamento: number }> {
+  const [o] = await sql<{ pack: PackResolvido | null; pack_id: string; ajustes: Record<string, unknown> }[]>`select pack, pack_id, ajustes from lab.operacao where id = ${op.id}`;
+  const pack = o?.pack?.hipoteses ? o.pack : packDaOperacao(o!.pack_id, o!.ajustes, CATALOGO).pack;
+  return { hipoteses: (pack?.hipoteses ?? []) as HipoteseV3[], intervencoes: pack?.intervencoes ?? [], compostos: pack?.compostos ?? [], orcamento: pack?.parametros?.orcamentoAtencao ?? 5, amostraMinima: pack?.parametros?.amostraMinima ?? 10 };
+}
+export async function tiqueInteligencia(sql: Sql, op: Awaited<ReturnType<typeof operacaoPlanejamento>> & {}, agora: Date) {
+  const hoje = hojeNoFuso(op.fuso, agora);
+  const [u] = await sql<{ d: string | null }[]>`select max(atualizado_em at time zone ${op.fuso})::date::text as d from lab.inteligencia_estado where operacao_id = ${op.id}`;
+  if (u?.d === hoje) return { status: 'em_dia' };
+  const bib = await bibliotecaV3(sql, op); if (!bib.hipoteses.length) return { status: 'sem_biblioteca' };
+  const R = await avaliarOperacao(sql, op, bib, agora.getTime(), await montarContexto(sql, op, hoje, { amostraMinima: bib.amostraMinima }));
+  return { status: 'avaliado', ativos: R.achados.filter(a => a.ativo).length, visiveis: R.orcamento.visiveis.length };
+}
 export async function rodadaAgendada(opts: { sql: Sql; env: Ambiente; fetch?: typeof fetch; agora?: () => Date }) {
   const dep: Dependencias = { sql: opts.sql, segredos: lerSegredo(opts.env), ...(opts.fetch ? { fetch: opts.fetch } : {}) };
   const conectores = await opts.sql<LinhaConector[]>`select id, operacao_id, tipo, nome, config, segredo_ref, ativo, cursor from lab.conector where ativo order by id`;
@@ -677,6 +738,9 @@ export async function rodadaAgendada(opts: { sql: Sql; env: Ambiente; fetch?: ty
     /* metas históricas: observa a meta em vigor de hoje e registra os ciclos encerrados sem registro (idempotente) */
     try { const op = await operacaoPlanejamento(opts.sql, o.slug); if (op) resultado['metas:' + o.slug] = await tiqueMetas(opts.sql, op, agora); }
     catch (e) { resultado['metas:' + o.slug] = { falha: (e as Error).message }; }
+    /* inteligência v3: uma avaliação por dia por operação, para a histerese e as observações andarem mesmo sem ninguém abrir a tela */
+    try { const op = await operacaoPlanejamento(opts.sql, o.slug); if (op) resultado['inteligencia:' + o.slug] = await tiqueInteligencia(opts.sql, op, agora); }
+    catch (e) { resultado['inteligencia:' + o.slug] = { falha: (e as Error).message }; }
   }
   for (const c of conectores) {
     try {
