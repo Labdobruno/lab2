@@ -5,5 +5,12 @@
   "type": "module",
   "main": "src/index.ts",
   "types": "src/index.ts",
-  "dependencies": { "@lab/nucleo": "*", "@lab/metricas": "*", "@lab/planejamento": "*", "@lab/hipoteses": "*", "postgres": "3.4.9" }
+  "dependencies": {
+    "@lab/nucleo": "*",
+    "@lab/metricas": "*",
+    "@lab/planejamento": "*",
+    "@lab/hipoteses": "*",
+    "postgres": "3.4.9",
+    "@lab/economia": "*"
+  }
 }
