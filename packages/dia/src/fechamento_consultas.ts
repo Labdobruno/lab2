@@ -104,7 +104,7 @@ export async function gerarFechamento(sql: Sql, op: Operacao, agora: Date, orige
     const F = await fotografiaDoDia(sql, op, hoje, agora, { historico, ctx });
     const R = relatorioDoDia(F), assinatura = await assinar(essenciaDoRelatorio(R));
     /* "meta" é a meta de receita do ciclo em vigor no dia: evidência para as metas históricas (ciclo sem plano nunca vira "configuração de hoje") */
-    const ref = { corte: F.corte, versao: R.v, regras: VERSAO_REGRAS, plano: F.plano, pessoas: F.pessoas.map(p => p.n), hash: assinatura, meta: F.equipe?.mes?.meta ?? null };
+    const ref = { corte: F.corte, versao: R.v, regras: VERSAO_REGRAS, plano: F.plano, pessoas: F.pessoas.map(p => p.n), hash: assinatura, meta: F.equipe?.mes?.meta ?? null, projecao: F.equipe?.mes?.projecao ?? null, realizado: F.equipe?.mes?.realizado ?? null };
     const rel = JSON.parse(JSON.stringify({ ...R, ref }));
     const st = await sql.begin(async tx => {
       const ins = await tx`insert into lab.dia_fechamento (operacao_id, data, original, atual, ref, assinatura) values (${op.id}, ${hoje}::date, ${tx.json(rel)}, ${tx.json(rel)}, ${tx.json(ref)}, ${assinatura}) on conflict (operacao_id, data) do nothing returning id`;
