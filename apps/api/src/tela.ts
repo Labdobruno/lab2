@@ -8,6 +8,7 @@ import { TELA_DIA } from './tela_dia.js';
 import { TELA_CICLO } from './tela_ciclo.js';
 import { TELA_ESTRATEGIA } from './tela_estrategia.js';
 import { TELA_ECONOMIA } from './tela_economia.js';
+import { TELA_CONSTRUTOR } from './tela_construtor.js';
 
 export const PAGINA = `<!doctype html>
 <html lang="pt-BR">
@@ -47,7 +48,7 @@ var app=document.getElementById('app');
 var NOMES={receita:'Receita (R$)',vendas:'Vendas',oportunidades:'Oportunidades',reuniao_realizada:'Reuniões feitas',agendamento:'Agendamentos',contato:'Contatos',tentativa:'Tentativas',proposta_enviada:'Propostas enviadas'};
 var ROTULO={no_ritmo:'No ritmo',atencao:'Atenção',atras:'Atrás'};
 var PIOR={atras:3,atencao:2,no_ritmo:1};
-var estado={ops:null,slug:null,data:null,pessoa:null,aba:'dia',ritual:null,pessoaDia:null,passoQ:null,faseQ:null,mhRev:null,mhEst:null,viuDiag:false,grafoSt:null,stFonte:'observado',stEntrada:null,stTicket:null};
+var estado={ops:null,slug:null,data:null,pessoa:null,aba:'dia',ritual:null,pessoaDia:null,passoQ:null,faseQ:null,mhRev:null,mhEst:null,viuDiag:false,grafoSt:null,stFonte:'observado',stEntrada:null,stTicket:null,csSuj:'equipe',csDe:null,csAte:null,csRes:'R',csCls:[],csMeta:null,csTempo:'passado',stmNome:null,stmDoc:null,stmNovo:false,stmCen:'base',stmAlvo:null,stmMeta:null,stmMedida:'volume',stmVista:'blocos',stmEd:null,stmEdA:null,stmBrief:null,stmPront:null};
 var FUNCOES={sdr:'SDR (prospecta e agenda)',closer:'Closer (fecha)',ambos:'SDR e closer',cs:'Sucesso do cliente',gestor:'Gestor',outro:'Outro'};
 function guardar(k,v){try{if(v==null)sessionStorage.removeItem(k);else sessionStorage.setItem(k,v)}catch(e){}}
 function ler(k){try{return sessionStorage.getItem(k)}catch(e){return null}}
@@ -106,7 +107,7 @@ function controles(){
 }
 function abas(){
   function b(id,t){var x=el('button',{type:'button',texto:t,onclick:function(){estado.aba=id;estado.pessoa=null;desenhar()}});if(estado.aba===id)x.setAttribute('aria-current','page');return x}
-  var mais=[['quarter','Quarter'],['economia','Economia'],['metashist','Metas históricas'],['equipe','Equipe e metas'],['programa','Programa de ciclos'],['fechamento','Fechar ciclo'],['achados','Achados'],['dados','Dados'],['studio','Studio'],['operacoes','Operações'],['ritmo','Ritmo (antigo)']];
+  var mais=[['quarter','Quarter'],['construtor','E se…?'],['studio','Studio'],['economia','Economia'],['metashist','Metas históricas'],['equipe','Equipe e metas'],['programa','Programa de ciclos'],['fechamento','Fechar ciclo'],['achados','Achados'],['dados','Dados'],['funis','Funis e campanhas'],['operacoes','Operações'],['ritmo','Ritmo (antigo)']];
   var atual=mais.filter(function(m){return m[0]===estado.aba})[0];
   var d=el('details',{class:'mais'},[el('summary',{texto:atual?atual[1]+' ▾':'Mais ▾'})].concat(mais.map(function(m){return b(m[0],m[1])})));
   if(atual)d.setAttribute('open','');
@@ -132,7 +133,9 @@ async function desenhar(){
   if(estado.aba==='achados')return telaAchados();
   if(estado.aba==='dados')return telaDados();
   if(estado.aba==='operacoes')return telaOperacoes();
-  if(estado.aba==='studio')return telaStudio();
+  if(estado.aba==='studio')return telaStudioM();
+  if(estado.aba==='construtor')return telaConstrutor();
+  if(estado.aba==='funis')return telaStudio();
   app.appendChild(el('p',{class:'suave',texto:'Carregando…'}));
   var q=estado.data?('?data='+encodeURIComponent(estado.data)):'';
   var r;
@@ -626,6 +629,7 @@ ${TELA_DIA}
 ${TELA_CICLO}
 ${TELA_ESTRATEGIA}
 ${TELA_ECONOMIA}
+${TELA_CONSTRUTOR}
 async function iniciar(){
   if(!ler('token'))return telaEntrada();
   limpar();app.appendChild(el('p',{class:'suave',texto:'Carregando…'}));

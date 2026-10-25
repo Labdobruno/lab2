@@ -208,6 +208,40 @@ describe.skipIf(semBanco)('API', () => {
     expect((await chamar('GET', '/admin/operacoes/nao-existe/studio/observado')).status).toBe(404);
   });
 
+  it('studio em blocos e construtor "e se" pela API', async () => {
+    await chamar('POST', '/admin/operacoes', { slug: 'st5', nome: 'Studio 5', packId: 'base' });
+    const obs = await (await chamar('GET', '/admin/operacoes/st5/studio/modelo-observado?data=2026-10-24')).json() as any;
+    expect(obs.modelo.nos.lead.tipo).toBe('entrada'); expect(obs.coorte).toBe(0);
+    const doc = { nos: { L: { tipo: 'entrada', nome: 'Leads', vol: 1000, bind: { etapa: 'lead' } }, V: { tipo: 'resultado', nome: 'Vendas', ticket: 5000, bind: { etapa: 'ganho' } } }, arestas: { a: { de: 'L', para: 'V', taxa: 0.05, fonte: 'premissa' } }, cenarios: { otimista: { nome: 'Otimista', regras: { 'a:a.taxa': { v: 0.08, fonte: 'hipotese' } } } } };
+    expect((await chamar('POST', '/admin/operacoes/st5/studio/modelos', { nome: 'M', doc: { nos: { x: { tipo: 'nada' } } } })).status).toBe(400);
+    expect((await chamar('POST', '/admin/operacoes/st5/studio/modelos', { nome: 'M', doc })).status).toBe(201);
+    expect(((await (await chamar('POST', '/admin/operacoes/st5/studio/modelos', { nome: 'M', doc })).json()) as any).versao).toBe(2);
+    expect(((await (await chamar('GET', '/admin/operacoes/st5/studio/modelos')).json()) as any[])[0]).toMatchObject({ nome: 'M', versao: 2, erros: 0 });
+    const sim = await (await chamar('POST', '/admin/operacoes/st5/studio/simular-modelo', { nome: 'M', meta: 100, cenarios: ['base', 'otimista'] })).json() as any;
+    expect(sim.direto.resultado.V.vol).toBe(50); expect(sim.reverso.entradas.L.inteiro).toBe(2000); expect(sim.comparacao[1].resultado.vol).toBe(80);
+    expect((await chamar('GET', '/admin/operacoes/st5/studio/modelos/M/monitor')).status).toBe(409);
+    expect((await chamar('POST', '/admin/operacoes/st5/studio/modelos/M/publicar', { validadeDe: '2026-10-01', validadeAte: '2026-12-31', meta: 100 })).status).toBe(201);
+    const mon = await (await chamar('GET', '/admin/operacoes/st5/studio/modelos/M/monitor?data=2026-10-24')).json() as any;
+    expect(mon.publicacao.n).toBe(1); expect(mon.monitor.nos.L.estado).toBe('fora');   // zero leads reais contra 1.000 planejados: dado existe, e está fora
+    const det = await (await chamar('GET', '/admin/operacoes/st5/studio/modelos/M')).json() as any;
+    expect(det.publicacoes).toHaveLength(1); expect(det.vigente).toBe(1);
+    expect((await chamar('POST', '/admin/operacoes/st5/studio/modelos/M/premissas?data=2026-10-24', {})).status).toBe(200);
+    const pr = await (await chamar('POST', '/admin/operacoes/st5/studio/prontidao', { nome: 'M', meta: 20, brief: { canais: { lista: ['pago'] } } })).json() as any;
+    expect(pr.pronto).toBe(false); expect(pr.L.find((x: any) => x.k === 'demanda').st).toBe('completo');
+    /* construtor */
+    const suj = await (await chamar('GET', '/admin/operacoes/st5/construtor/sujeitos')).json() as any[];
+    expect(suj[0].id).toBe('equipe');
+    const cs = await (await chamar('POST', '/admin/operacoes/st5/construtor?data=2026-10-24', { clausulas: [{ ind: 'ticket', op: 'maior', num: 10, un: '%' }] })).json() as any;
+    expect(cs.erros[0]).toMatch(/Sem histórico suficiente/);        // operação vazia: não inventa taxas
+    expect(cs.frase).toMatch(/^Se o ticket médio fosse maior em 10%/);
+    expect((await chamar('POST', '/admin/operacoes/st5/construtor', { clausulas: [{ ind: 'ticket', op: 'xyz' }] })).status).toBe(400);
+    expect((await chamar('POST', '/admin/operacoes/st5/construtor/perguntas', { nome: 'P1', clausulas: [{ ind: 'ticket', op: 'maior', num: 10, un: '%' }] })).status).toBe(201);
+    const pg = await (await chamar('GET', '/admin/operacoes/st5/construtor/perguntas')).json() as any[];
+    expect(pg).toHaveLength(1);
+    expect((await chamar('POST', `/admin/operacoes/st5/construtor/perguntas/${pg[0].id}/apagar`, {})).status).toBe(200);
+    expect((await chamar('POST', '/admin/operacoes/st5/construtor/experimento?data=2026-10-24', { clausulas: [{ ind: 'ticket', op: 'maior', num: 10, un: '%' }] })).status).toBe(409);
+  });
+
   it('lista packs válidos', async () => {
     const r = await (await chamar('GET', '/admin/packs')).json() as any[];
     expect(r.every(p => p.ok)).toBe(true);

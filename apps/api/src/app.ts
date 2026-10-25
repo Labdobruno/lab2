@@ -38,6 +38,19 @@
      POST /admin/operacoes/:slug/studio/simular           { funil?: nome|"observado", grafo?, entrada?, ticketMedio?, alteracoes? }  não grava
      GET|POST /admin/operacoes/:slug/studio/campanhas     campanhas de go-to-market { nome, canal, fim, orcamento, inicio?, funil?, cpl?, ticketMedio?, margem? }
      POST /admin/operacoes/:slug/studio/campanhas/:id/iniciar | encerrar   { investimentoReal? }
+     GET  /admin/operacoes/:slug/studio/modelos                 modelos em blocos (Onda 5); GET …/modelos/:nome  o doc, validação e publicações
+     POST /admin/operacoes/:slug/studio/modelos                 { nome, doc }  salvar (sobe a versão)
+     POST /admin/operacoes/:slug/studio/modelos/:nome/publicar  { cenario?, alvo?, meta?, validadeDe, validadeAte, motivo? }  fotografia imutável
+     POST /admin/operacoes/:slug/studio/modelos/:nome/arquivar | premissas (leva as taxas ao plano do quarter ?data=)
+     GET  /admin/operacoes/:slug/studio/modelos/:nome/monitor?data=   planejado × realizado da publicação vigente
+     GET  /admin/operacoes/:slug/studio/modelo-observado?data=  o funil principal em blocos com as taxas da coorte
+     POST /admin/operacoes/:slug/studio/preencher               { doc }  taxas e volumes da coorte onde há vínculo
+     POST /admin/operacoes/:slug/studio/simular-modelo          { nome?|doc, cenario?, cenarios?, alvo?, meta?, medida?, estoque?, comPipeline? }  direto, reverso, sensibilidade, comparação
+     POST /admin/operacoes/:slug/studio/prontidao               { brief, nome?|doc, cenario?, alvo?, meta? }
+     GET  /admin/operacoes/:slug/construtor/sujeitos?de=&ate=   equipe, vendedores e canais com leads no período
+     POST /admin/operacoes/:slug/construtor                     { sujeito?, de?, ate?, clausulas[], res?, tempo?, meta? }  a pergunta "e se…?" (não grava)
+     GET|POST /admin/operacoes/:slug/construtor/perguntas       perguntas salvas { nome, sujeito, periodo, clausulas, res }; POST …/perguntas/:id/apagar
+     POST /admin/operacoes/:slug/construtor/experimento         { titulo?, sujeito?, de?, ate?, clausulas[], fimPrevisto?, decisaoId? }  a 1ª condição vira métrica e alvo
      GET  /admin/operacoes/:slug/quarter?data=  plano do quarter: passos, cenários e programa de ciclos
      POST /admin/operacoes/:slug/quarter        inicia o quarter (passo 1)        ?data=
      GET  /admin/operacoes/:slug/quarter/diagnostico                              passo 1: o quarter anterior
@@ -103,7 +116,9 @@ import {
   avaliarHipoteses, checarQualidade, concluirExperimento, decisoes, ErroDeMemoria, experimentos, iniciarExperimento, montarContexto, registrarDecisao,
 } from '@lab/hipoteses';
 import {
-  campanhas, criarCampanha, encerrarCampanha, ErroDeStudio, funisSalvos, grafoObservado, grafoSalvo, iniciarCampanha, salvarFunil, simularFunil, validarGrafo,
+  apagarPergunta, arquivarModelo, campanhas, criarCampanha, encerrarCampanha, ErroDeStudio, funisSalvos, grafoObservado, grafoSalvo, iniciarCampanha, levarPremissasAoPlano, modeloDoStudio,
+  modeloObservado, modelos, monitorDoModelo, normalizarModelo, parametros, perguntasSalvas, preencherPeloHistorico, prontidao, publicarModelo, reverso, salvarFunil, salvarModelo, salvarPergunta,
+  simularConstrutor, simularFunil, simularModelo, sujeitos, validarGrafo, virarExperimento,
 } from '@lab/studio';
 import {
   ausencias, dadosDoDia, definirCapacidade, desfazerLancamento, equipeDoDia, ErroDoDia, fotosDoDia, gravarFoto, justificar, lancamentos, lancar, marcarAusencia,
@@ -204,6 +219,29 @@ export function criarApp(opts: { sql: Sql; env: Ambiente; fetch?: typeof fetch; 
             else grafo = (await grafoObservado(sql, op, data)).grafo;
             return json({ grafo, ...simularFunil(grafo, await contexto(), { entrada: b.entrada == null ? null : Number(b.entrada), ticketMedio: b.ticketMedio == null ? null : Number(b.ticketMedio), alteracoes: (b.alteracoes ?? {}) as Record<string, number | string> }) });
           }
+          const quem = req.headers.get('x-lab-por')?.slice(0, 80) ?? null;
+          if (sub === 'modelos' && !partes[4] && m === 'GET') return json(await modelos(sql, op));
+          if (sub === 'modelos' && !partes[4] && m === 'POST') { const b = await corpoJSON(req); return json(await salvarModelo(sql, op, b.nome, b.doc, quem), 201); }
+          if (sub === 'modelos' && partes[4]) {
+            const nome = decodeURIComponent(partes[4]);
+            if (!partes[5] && m === 'GET') return json(await modeloDoStudio(sql, op, nome, data));
+            if (partes[5] === 'publicar' && m === 'POST') return json(await publicarModelo(sql, op, nome, await corpoJSON(req), quem), 201);
+            if (partes[5] === 'arquivar' && m === 'POST') return json(await arquivarModelo(sql, op, nome));
+            if (partes[5] === 'monitor' && m === 'GET') return json(await monitorDoModelo(sql, op, nome, data));
+            if (partes[5] === 'premissas' && m === 'POST') return json(await levarPremissasAoPlano(sql, op, nome, data, quem));
+          }
+          if (sub === 'modelo-observado' && m === 'GET') return json(await modeloObservado(sql, op, data));
+          if (sub === 'preencher' && m === 'POST') { const b = await corpoJSON(req); return json(await preencherPeloHistorico(sql, op, normalizarModelo(b.doc), data)); }
+          if (sub === 'simular-modelo' && m === 'POST') return json(await simularModelo(sql, op, await corpoJSON(req), data));
+          if (sub === 'prontidao' && m === 'POST') {
+            const b = await corpoJSON(req);
+            const doc = typeof b.nome === 'string' && b.nome ? (await modeloDoStudio(sql, op, b.nome, data)).doc : b.doc ? normalizarModelo(b.doc) : null;
+            const P = doc ? parametros(doc, typeof b.cenario === 'string' ? b.cenario : 'base') : null;
+            const alvo = P ? (typeof b.alvo === 'string' && P.nos[b.alvo] ? b.alvo : Object.keys(P.nos).find(n => P.nos[n]!.tipo === 'resultado')) : null;
+            const meta = b.meta == null || b.meta === '' ? null : Number(b.meta);
+            const rev = P && alvo && meta != null && meta > 0 ? reverso(P, alvo, meta) : null;
+            return json({ ...prontidao({ brief: (b.brief ?? {}) as never }, P, { reverso: rev }), reverso: rev });
+          }
           if (sub === 'campanhas') {
             if (!partes[4] && m === 'GET') return json(await campanhas(sql, op));
             if (!partes[4] && m === 'POST') return json(await criarCampanha(sql, op, await contexto(), hoje, await corpoJSON(req)), 201);
@@ -252,6 +290,25 @@ export function criarApp(opts: { sql: Sql; env: Ambiente; fetch?: typeof fetch; 
           }
         } catch (e) {
           if (e instanceof ErroDeMemoria) return erro(e.message, e.status);
+          throw e;
+        }
+      }
+      if (id && acao === 'construtor') {
+        const op = await operacaoPlanejamento(sql, id);
+        if (!op) return erro('operação não encontrada', 404);
+        const agora = (opts.agora ?? (() => new Date()))(), hoje = hojeNoFuso(op.fuso, agora);
+        const data = url.searchParams.get('data') ?? hoje;
+        if (!dataValida(data)) return erro('data deve ser AAAA-MM-DD');
+        const quem = req.headers.get('x-lab-por')?.slice(0, 80) ?? null;
+        try {
+          if (!sub && m === 'POST') return json(await simularConstrutor(sql, op, await corpoJSON(req), data, agora.getTime()));
+          if (sub === 'sujeitos' && m === 'GET') { const de = url.searchParams.get('de') ?? somarDias(data, -op.janelaHistoricaDias), ate = url.searchParams.get('ate') ?? data; if (!dataValida(de) || !dataValida(ate)) return erro('de e ate devem ser AAAA-MM-DD'); return json(await sujeitos(sql, op, de, ate)); }
+          if (sub === 'perguntas' && !partes[4] && m === 'GET') return json(await perguntasSalvas(sql, op));
+          if (sub === 'perguntas' && !partes[4] && m === 'POST') return json(await salvarPergunta(sql, op, await corpoJSON(req), quem), 201);
+          if (sub === 'perguntas' && partes[4] && partes[5] === 'apagar' && m === 'POST') return json(await apagarPergunta(sql, op, partes[4]));
+          if (sub === 'experimento' && m === 'POST') return json(await virarExperimento(sql, op, data, await corpoJSON(req)), 201);
+        } catch (e) {
+          if (e instanceof ErroDeStudio || e instanceof ErroDeMemoria) return erro(e.message, e.status);
           throw e;
         }
       }

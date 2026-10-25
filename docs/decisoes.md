@@ -99,3 +99,14 @@ Cada decisão tem o porquê, para não ser refeita sem motivo.
 - **Sem contas a pagar.** O custo real é lançado à mão e rotulado; só vira efetivo quando marcado completo. Até lá a conta prevista vale.
 - **Exceção não barra, registra.** Abaixo do piso ou acima do desconto máximo exige motivo e grava quem, por quê e quanto custou de MC. O painel mostra. **Confirmado pelo Bruno em 25/10/2026.**
 - **D21 com bom senso:** só meses terminados, a partir do primeiro mês lançado do canal, cobram investimento. Senão qualquer janela histórica anularia CAC e ROI.
+
+## Onda 5: Studio e construtor
+
+- **Coorte, não fluxo.** Toda taxa observada (modelo observado, preencher pelo histórico, monitor) conta cada negócio uma vez: dos que alcançaram a origem, quantos alcançaram o destino. O "observado" por transições da fase 7 continua na tela antiga, mas não alimenta o modelo.
+- **Dois motores, duas telas.** O construtor "E se…?" é linear e fala português com o gestor; o Studio é o desenho em blocos. Não há unificação forçada: a V1 também os separava.
+- **A margem do construtor vem da economia da venda.** Sem venda com custo lançado, usa a política de preço no ticket médio e avisa "estimada". Nenhuma margem padrão escondida.
+- **Capacidade e limite não declarados não dizem "sim".** A viabilidade do reverso fica "não avaliada"; a prontidão fica pendente.
+- **Publicação imutável, rascunho editável.** O modelo sobe versão a cada gravação; publicar congela a fotografia com cenário, alvo, meta e validade; republicar exige motivo; o monitor sempre compara a publicação vigente na data.
+- **O monitor não atribui causa a pessoa.** "A causa precisa de evidência adicional"; o diagnóstico mostra onde está o desvio e o que investigar.
+- **Premissas ao plano é ação explícita**, como levar metas aos ciclos: grava `quarter_estrategia.doc.premissas` com a origem (modelo, publicação, cenário).
+
